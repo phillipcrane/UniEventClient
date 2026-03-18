@@ -144,6 +144,17 @@ html.dark .login-card-glow {
     box-shadow: 0 16px 34px rgba(232, 93, 59, 0.34);
 }
 
+.login-btn-secondary {
+    border-color: rgba(60, 84, 240, 0.35);
+    background: rgba(60, 84, 240, 0.12);
+    color: #1b2b84;
+    box-shadow: 0 10px 24px rgba(40, 60, 140, 0.14);
+}
+
+.login-btn-secondary:hover {
+    background: rgba(60, 84, 240, 0.2);
+}
+
 .login-btn-facebook {
     border-color: rgba(60, 84, 240, 0.35);
     background: rgba(60, 84, 240, 0.12);
@@ -160,6 +171,17 @@ html.dark .login-btn-facebook {
     background: rgba(60, 84, 240, 0.2);
     color: #fff;
     box-shadow: 0 10px 24px rgba(40, 60, 140, 0.22);
+}
+
+html.dark .login-btn-secondary {
+    border-color: rgba(255, 255, 255, 0.25);
+    background: rgba(60, 84, 240, 0.2);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(40, 60, 140, 0.22);
+}
+
+html.dark .login-btn-secondary:hover {
+    background: rgba(60, 84, 240, 0.3);
 }
 
 html.dark .login-btn-facebook:hover {
@@ -189,6 +211,6 @@ html.dark .login-btn-facebook:hover {
     }
 
     .login-actions {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }

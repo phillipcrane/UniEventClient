@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Footer } from '../components/Footer';
-import { Facebook, LogIn } from 'lucide-react';
+import { Facebook, LogIn, UserPlus } from 'lucide-react';
 import '../styles/LoginPage.css';
 
 export function LoginPage() {
@@ -34,7 +34,7 @@ export function LoginPage() {
                             <p className="login-eyebrow">AUTHENTICATION</p>
                             <h2 className="login-title">Sign in to your account</h2>
                             <p className="login-description">Enter your username and password to continue.</p>
-                            <p className="login-helper">No account yet? Use one of the sign-up options below.</p>
+                            <p className="login-helper">No account yet? Use Sign Up or Sign Up / Log In with Facebook.</p>
 
                             <form className="login-form" onSubmit={(e) => e.preventDefault()}>
                                 <label className="login-label" htmlFor="username">Username</label>
@@ -63,8 +63,13 @@ export function LoginPage() {
                                         Sign In
                                     </button>
 
+                                    <button type="button" className="login-btn login-btn-secondary">
+                                        <UserPlus size={18} />
+                                        Sign Up
+                                    </button>
+
                                     <button type="button" className="login-btn login-btn-facebook">
-                                        <Facebook size={18} />
+                                        <Facebook size={22} strokeWidth={2.35} />
                                         Sign Up / Log In with Facebook
                                     </button>
                                 </div>
