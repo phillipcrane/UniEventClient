@@ -7,6 +7,7 @@ import { getEvents, getPages } from '../services/dal';
 import { buildFacebookLoginUrl } from '../services/facebook';
 import { parseDateOnly, startOfDayMs, endOfDayMs } from '../utils/dateUtils';
 import type { Event as EventType, Page } from '../types';
+import { Link } from 'react-router-dom';
 
 export function MainPage() { // function for main page (can be used in other files bc of export) hej  
   const [pages, setPages] = useState([] as Page[]); // a variable that holds an array of pages
@@ -36,7 +37,7 @@ export function MainPage() { // function for main page (can be used in other fil
   }, []); // [] at the end means it only runs once when component is mounted
 
 
-    // organizer filter (multi-select)
+  // organizer filter (multi-select)
   const [pageIds, setPageIds] = useState<string[]>([]);
   const filteredByPage = pageIds.length > 0 ? events.filter(e => pageIds.includes(e.pageId)) : events;
 
@@ -60,7 +61,7 @@ export function MainPage() { // function for main page (can be used in other fil
     })
     : filteredByPage; // if there is no debouncedQuery then return all events from filteredByPage
 
-    // date range filter
+  // date range filter
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
 
@@ -73,7 +74,7 @@ export function MainPage() { // function for main page (can be used in other fil
     const eventMs = new Date(event.startTime).getTime(); // get timestamp of event start time
     if (fromObj && eventMs < startOfDayMs(fromObj)) return false; // if fromdate is after event start then exclude
     if (effectiveToObj && eventMs > endOfDayMs(effectiveToObj)) return false; // if todate is before event start then exclude
-    
+
     return true;
   });
 
@@ -89,13 +90,13 @@ export function MainPage() { // function for main page (can be used in other fil
 
   // build final list with sortMode
   let list = [...dateFiltered];
-  
+
   // only filter out past events if NOT in 'all' mode
   if (sortMode !== 'all') {
     const now = new Date().getTime();
     list = list.filter(event => new Date(event.startTime).getTime() >= now); // exclude events that have already started in the past
   }
-  
+
   if (sortMode === 'upcoming') { // if upcoming is selected then
     list = list.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()); // sort by startTime ascending
   } else if (sortMode === 'newest') { // if it is set to newest then
@@ -109,18 +110,25 @@ export function MainPage() { // function for main page (can be used in other fil
     <div className="min-h-screen flex flex-col">
       <header className="page-header mx-6 md:mx-8 mt-4 md:mt-6 mb-6">
         <div className="header-content">
-          <img 
-            src="https://firebasestorage.googleapis.com/v0/b/dtuevent-8105b.firebasestorage.app/o/picture%2Fdtulogo.png?alt=media&token=7e86de6e-f1f4-471d-8354-70ad70bafe14" 
-            alt="DTU Logo" 
-            className="header-logo" 
+          <img
+            src="https://firebasestorage.googleapis.com/v0/b/dtuevent-8105b.firebasestorage.app/o/picture%2Fdtulogo.png?alt=media&token=7e86de6e-f1f4-471d-8354-70ad70bafe14"
+            alt="DTU Logo"
+            className="header-logo"
           />
           <div className="header-text">
             <h1 className="header-title">DTU Events</h1>
             <p className="header-subtitle">Discover Technical University of Denmark Events</p>
           </div>
         </div>
-        {/* Theme toggle placed inside header so it floats cleanly */}
+        {/* Auth and theme controls in the upper header */}
         <div className="header-toggle">
+          <Link
+            to="/login"
+            className="rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] sm:px-4 sm:text-sm"
+            aria-label="Log in or sign up"
+          >
+            Log In / Sign Up
+          </Link>
           <ThemeToggle />
         </div>
       </header>
@@ -128,39 +136,39 @@ export function MainPage() { // function for main page (can be used in other fil
       {/* Filter and Content Section */}
       <div className="flex-1 px-6 md:px-8 pb-8 max-w-6xl mx-auto w-full">
         <div className="space-y-8">
-        {/* this is where filterbar component receives data and functions */}
-        <FilterBar // renders the filter bar component 
-          pages={pages}
-          pageIds={pageIds}
-          setPageIds={setPageIds}
-          query={query}
-          setQuery={setQuery}
-          fromDate={fromDate}
-          setFromDate={setFromDate}
-          toDate={toDate}
-          setToDate={setToDate}
-          count={count}
-          sortMode={sortMode}
-          setSortMode={setSortMode}
-      />
+          {/* this is where filterbar component receives data and functions */}
+          <FilterBar // renders the filter bar component 
+            pages={pages}
+            pageIds={pageIds}
+            setPageIds={setPageIds}
+            query={query}
+            setQuery={setQuery}
+            fromDate={fromDate}
+            setFromDate={setFromDate}
+            toDate={toDate}
+            setToDate={setToDate}
+            count={count}
+            sortMode={sortMode}
+            setSortMode={setSortMode}
+          />
 
-      {/* conditional rendering */}
+          {/* conditional rendering */}
 
-      {loading && <p className="text-sm text-[var(--text-subtle)] mb-2 animate-pulse">Loading…</p>}  {/*if loading is true then show loading text*/}
-      {error && <p className="text-sm text-[var(--dtu-accent)] mb-2 font-semibold">{error}</p>} {/* if there is an error then show error message */}
-      {invalidRange && (
-        <p className="text-xs text-[var(--dtu-accent)] mb-2 font-semibold">End date is before start date. Showing results up to any end date.</p>
-      )} {/* if date range is invalid then show warning message */}
+          {loading && <p className="text-sm text-[var(--text-subtle)] mb-2 animate-pulse">Loading…</p>}  {/*if loading is true then show loading text*/}
+          {error && <p className="text-sm text-[var(--dtu-accent)] mb-2 font-semibold">{error}</p>} {/* if there is an error then show error message */}
+          {invalidRange && (
+            <p className="text-xs text-[var(--dtu-accent)] mb-2 font-semibold">End date is before start date. Showing results up to any end date.</p>
+          )} {/* if date range is invalid then show warning message */}
 
-        <EventList list={list} /> {/* the final list of events shown after all filters have been applied */}
-        <div className="flex justify-center">
-          <a
-            href={buildFacebookLoginUrl()}
-            className="bg-[var(--link-primary)] hover:bg-[var(--link-primary-hover)] text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          >
-            Connect Facebook Page
-          </a>
-        </div>
+          <EventList list={list} /> {/* the final list of events shown after all filters have been applied */}
+          <div className="flex justify-center">
+            <a
+              href={buildFacebookLoginUrl()}
+              className="bg-[var(--link-primary)] hover:bg-[var(--link-primary-hover)] text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+            >
+              Connect Facebook Page
+            </a>
+          </div>
         </div>
       </div>
       <Footer />

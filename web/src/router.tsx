@@ -4,6 +4,7 @@ import { EventPage } from './pages/EventPage';
 import { TermsAndConditionsPage } from './pages/TermsAndConditionsPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { DataDeletionPage } from './pages/DataDeletionPage';
+import { LoginPage } from './pages/LoginPage';
 
 export const router = createBrowserRouter([
   {
@@ -25,5 +26,9 @@ export const router = createBrowserRouter([
   {
     path: '/data-deletion',
     element: <DataDeletionPage />,
+  },
+  {
+    path: '/login',
+    element: <LoginPage />,
   },
 ]);
