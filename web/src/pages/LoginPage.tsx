@@ -1,10 +1,41 @@
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Footer } from '../components/Footer';
 import { Facebook, LogIn, UserPlus } from 'lucide-react';
+import { loginWithEmail, mapAuthError } from '../services/auth';
 import '../styles/LoginPage.css';
 
 export function LoginPage() {
+    const navigate = useNavigate();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setErrorMessage('');
+
+        const trimmedEmail = email.trim();
+        if (!trimmedEmail || !password) {
+            setErrorMessage('Please provide both email and password.');
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            await loginWithEmail(trimmedEmail, password);
+            navigate('/', { replace: true });
+        } catch (error) {
+            setErrorMessage(mapAuthError(error));
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     return (
         <div className="min-h-screen flex flex-col">
             <header className="page-header mx-6 md:mx-8 mt-4 md:mt-6 mb-8">
@@ -15,8 +46,8 @@ export function LoginPage() {
                         className="header-logo"
                     />
                     <div className="header-text">
-                        <h1 className="header-title">Create Your Account</h1>
-                        <p className="header-subtitle">Join DTU Events and personalize your event flow</p>
+                        <h1 className="header-title">Welcome Back</h1>
+                        <p className="header-subtitle">Log in to continue your DTU Events experience</p>
                     </div>
                 </div>
 
@@ -33,18 +64,21 @@ export function LoginPage() {
                         <div className="login-card-content">
                             <p className="login-eyebrow">AUTHENTICATION</p>
                             <h2 className="login-title">Sign in to your account</h2>
-                            <p className="login-description">Enter your username and password to continue.</p>
+                            <p className="login-description">Enter your email and password to continue.</p>
                             <p className="login-helper">No account yet? Use Sign Up or Sign Up / Log In with Facebook.</p>
 
-                            <form className="login-form" onSubmit={(e) => e.preventDefault()}>
-                                <label className="login-label" htmlFor="username">Username</label>
+                            <form className="login-form" onSubmit={handleSubmit}>
+                                <label className="login-label" htmlFor="email">Email</label>
                                 <input
-                                    id="username"
-                                    name="username"
-                                    type="text"
-                                    autoComplete="username"
-                                    placeholder="Enter your username"
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    autoComplete="email"
+                                    placeholder="Enter your email"
                                     className="login-input"
+                                    value={email}
+                                    onChange={(event) => setEmail(event.target.value)}
+                                    required
                                 />
 
                                 <label className="login-label" htmlFor="password">Password</label>
@@ -55,12 +89,17 @@ export function LoginPage() {
                                     autoComplete="current-password"
                                     placeholder="Enter your password"
                                     className="login-input"
+                                    value={password}
+                                    onChange={(event) => setPassword(event.target.value)}
+                                    required
                                 />
 
+                                {errorMessage && <p className="login-status login-status-error">{errorMessage}</p>}
+
                                 <div className="login-actions">
-                                    <button type="button" className="login-btn login-btn-primary">
+                                    <button type="submit" className="login-btn login-btn-primary" disabled={isLoading}>
                                         <LogIn size={18} />
-                                        Sign In
+                                        {isLoading ? 'Signing In...' : 'Sign In'}
                                     </button>
 
                                     <Link to="/signup" className="login-btn login-btn-secondary">
@@ -68,7 +107,7 @@ export function LoginPage() {
                                         Sign Up
                                     </Link>
 
-                                    <button type="button" className="login-btn login-btn-facebook">
+                                    <button type="button" className="login-btn login-btn-facebook" disabled={isLoading}>
                                         <Facebook size={22} strokeWidth={2.35} />
                                         Sign Up / Log In with Facebook
                                     </button>

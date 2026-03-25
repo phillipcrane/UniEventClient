@@ -1,10 +1,59 @@
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Footer } from '../components/Footer';
 import { Facebook, UserPlus } from 'lucide-react';
+import { mapAuthError, signupWithEmail } from '../services/auth';
 import '../styles/SignupPage.css';
 
 export function SignupPage() {
+    const navigate = useNavigate();
+    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setErrorMessage('');
+
+        const trimmedUsername = username.trim();
+        const trimmedEmail = email.trim();
+
+        if (!trimmedUsername || !trimmedEmail || !password || !confirmPassword) {
+            setErrorMessage('Please fill out all fields.');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setErrorMessage('Passwords do not match.');
+            return;
+        }
+
+        if (password.length < 6) {
+            setErrorMessage('Password must be at least 6 characters.');
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            await signupWithEmail({
+                username: trimmedUsername,
+                email: trimmedEmail,
+                password,
+            });
+            navigate('/', { replace: true });
+        } catch (error) {
+            setErrorMessage(mapAuthError(error));
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     return (
         <div className="min-h-screen flex flex-col">
             <header className="page-header mx-6 md:mx-8 mt-4 md:mt-6 mb-8">
@@ -33,10 +82,10 @@ export function SignupPage() {
                         <div className="signup-card-content">
                             <p className="signup-eyebrow">NEW ACCOUNT</p>
                             <h2 className="signup-title">Sign up to get started</h2>
-                            <p className="signup-description">Create your account with a username and password.</p>
+                            <p className="signup-description">Create your account with a username, email, and password.</p>
                             <p className="signup-helper">Already have an account? Log in from the link below.</p>
 
-                            <form className="signup-form" onSubmit={(e) => e.preventDefault()}>
+                            <form className="signup-form" onSubmit={handleSubmit}>
                                 <label className="signup-label" htmlFor="signup-username">Username</label>
                                 <input
                                     id="signup-username"
@@ -45,6 +94,22 @@ export function SignupPage() {
                                     autoComplete="username"
                                     placeholder="Choose a username"
                                     className="signup-input"
+                                    value={username}
+                                    onChange={(event) => setUsername(event.target.value)}
+                                    required
+                                />
+
+                                <label className="signup-label" htmlFor="signup-email">Email</label>
+                                <input
+                                    id="signup-email"
+                                    name="email"
+                                    type="email"
+                                    autoComplete="email"
+                                    placeholder="Enter your email"
+                                    className="signup-input"
+                                    value={email}
+                                    onChange={(event) => setEmail(event.target.value)}
+                                    required
                                 />
 
                                 <label className="signup-label" htmlFor="signup-password">Password</label>
@@ -55,6 +120,9 @@ export function SignupPage() {
                                     autoComplete="new-password"
                                     placeholder="Create a password"
                                     className="signup-input"
+                                    value={password}
+                                    onChange={(event) => setPassword(event.target.value)}
+                                    required
                                 />
 
                                 <label className="signup-label" htmlFor="signup-confirm-password">Confirm Password</label>
@@ -65,15 +133,20 @@ export function SignupPage() {
                                     autoComplete="new-password"
                                     placeholder="Type your password again"
                                     className="signup-input"
+                                    value={confirmPassword}
+                                    onChange={(event) => setConfirmPassword(event.target.value)}
+                                    required
                                 />
 
+                                {errorMessage && <p className="signup-status signup-status-error">{errorMessage}</p>}
+
                                 <div className="signup-actions">
-                                    <button type="button" className="signup-btn signup-btn-primary">
+                                    <button type="submit" className="signup-btn signup-btn-primary" disabled={isLoading}>
                                         <UserPlus size={18} />
-                                        Sign Up
+                                        {isLoading ? 'Creating Account...' : 'Sign Up'}
                                     </button>
 
-                                    <button type="button" className="signup-btn signup-btn-facebook">
+                                    <button type="button" className="signup-btn signup-btn-facebook" disabled={isLoading}>
                                         <Facebook size={22} strokeWidth={2.35} />
                                         Sign Up with Facebook
                                     </button>

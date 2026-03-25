@@ -117,6 +117,16 @@ html.dark .login-card-glow {
     gap: 0.75rem;
 }
 
+.login-status {
+    margin: 0.15rem 0 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.login-status-error {
+    color: var(--dtu-accent);
+}
+
 .login-btn {
     border-radius: 14px;
     border: 1px solid transparent;
@@ -132,6 +142,12 @@ html.dark .login-card-glow {
 
 .login-btn:hover {
     transform: translateY(-1px);
+}
+
+.login-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .login-btn-primary {
