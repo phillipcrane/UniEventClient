@@ -1,6 +1,8 @@
 import { FirebaseError } from 'firebase/app';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile, type User } from 'firebase/auth';
 import { getAuthInstance } from './firebase';
+
+export type AuthUser = User;
 
 type SignupInput = {
     username: string;
@@ -24,6 +26,16 @@ export async function signupWithEmail({ username, email, password }: SignupInput
     }
 
     return credential.user;
+}
+
+export function onAuthUserChanged(callback: (user: AuthUser | null) => void) {
+    const auth = getAuthInstance();
+    return onAuthStateChanged(auth, callback);
+}
+
+export async function signOutCurrentUser() {
+    const auth = getAuthInstance();
+    await signOut(auth);
 }
 
 export function mapAuthError(error: unknown): string {

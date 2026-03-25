@@ -1,19 +1,26 @@
-import { useEffect, useState } from 'react'; // React imports
+import { useEffect, useRef, useState } from 'react'; // React imports
 import { FilterBar } from '../components/FilterBar';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { EventList } from '../components/EventList';
 import { Footer } from '../components/Footer';
 import { getEvents, getPages } from '../services/dal';
+import { mapAuthError, onAuthUserChanged, signOutCurrentUser } from '../services/auth';
 import { buildFacebookLoginUrl } from '../services/facebook';
 import { parseDateOnly, startOfDayMs, endOfDayMs } from '../utils/dateUtils';
 import type { Event as EventType, Page } from '../types';
+import type { AuthUser } from '../services/auth';
 import { Link } from 'react-router-dom';
+import { CircleUserRound, LogOut } from 'lucide-react';
 
 export function MainPage() { // function for main page (can be used in other files bc of export) hej  
   const [pages, setPages] = useState([] as Page[]); // a variable that holds an array of pages
   const [events, setEvents] = useState([] as EventType[]); // a variable that holds an array of events
   const [loading, setLoading] = useState(true); // loading is by defualt true until data is loaded
   const [error, setError] = useState<string>(''); // errors are empty by default until an error occurs
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   // runs when component is first rendered
   useEffect(() => {
@@ -35,6 +42,49 @@ export function MainPage() { // function for main page (can be used in other fil
     })();
     return () => { cancelled = true };
   }, []); // [] at the end means it only runs once when component is mounted
+
+  useEffect(() => {
+    const unsubscribe = onAuthUserChanged((user) => {
+      setCurrentUser(user);
+      if (!user) {
+        setIsProfileOpen(false);
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!isProfileOpen) {
+      return;
+    }
+
+    function handleClickOutside(event: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileOpen]);
+
+  async function handleSignOut() {
+    try {
+      setIsSigningOut(true);
+      setError('');
+      await signOutCurrentUser();
+      setIsProfileOpen(false);
+    } catch (err) {
+      setError(mapAuthError(err));
+    } finally {
+      setIsSigningOut(false);
+    }
+  }
+
+  const userLabel = currentUser?.displayName || currentUser?.email || 'My Profile';
 
 
   // organizer filter (multi-select)
@@ -121,14 +171,45 @@ export function MainPage() { // function for main page (can be used in other fil
           </div>
         </div>
         {/* Auth and theme controls in the upper header */}
-        <div className="header-toggle">
-          <Link
-            to="/login"
-            className="rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] sm:px-4 sm:text-sm"
-            aria-label="Log in or sign up"
-          >
-            Log In / Sign Up
-          </Link>
+        <div className="header-toggle relative flex items-center gap-2">
+          {currentUser ? (
+            <div className="relative" ref={profileMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsProfileOpen((open) => !open)}
+                className="inline-flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] sm:px-4 sm:text-sm"
+                aria-label="Open profile menu"
+                aria-expanded={isProfileOpen}
+              >
+                <CircleUserRound size={18} />
+                <span className="hidden sm:inline">Profile</span>
+              </button>
+
+              {isProfileOpen && (
+                <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-2 shadow-xl">
+                  <p className="px-2 py-2 text-xs font-semibold text-[var(--text-subtle)]">Signed in as</p>
+                  <p className="truncate px-2 pb-2 text-sm font-semibold text-[var(--text-primary)]">{userLabel}</p>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={isSigningOut}
+                    className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <LogOut size={16} />
+                    {isSigningOut ? 'Signing out...' : 'Sign out'}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] sm:px-4 sm:text-sm"
+              aria-label="Log in or sign up"
+            >
+              Log In / Sign Up
+            </Link>
+          )}
           <ThemeToggle />
         </div>
       </header>
