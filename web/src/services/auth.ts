@@ -3,6 +3,7 @@ import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndP
 import { getAuthInstance } from './firebase';
 
 export type AuthUser = User;
+type AuthErrorContext = 'login' | 'signup' | 'general';
 
 type SignupInput = {
     username: string;
@@ -38,7 +39,7 @@ export async function signOutCurrentUser() {
     await signOut(auth);
 }
 
-export function mapAuthError(error: unknown): string {
+export function mapAuthError(error: unknown, context: AuthErrorContext = 'general'): string {
     if (error instanceof Error && error.message.includes('Missing Firebase env variables:')) {
         return error.message;
     }
@@ -57,6 +58,9 @@ export function mapAuthError(error: unknown): string {
         case 'auth/configuration-not-found':
             return 'Authentication provider configuration is missing in Firebase Console.';
         case 'auth/invalid-email':
+            if (context === 'login') {
+                return 'Invalid email or password.';
+            }
             return 'The email address is invalid.';
         case 'auth/user-disabled':
             return 'This account has been disabled.';

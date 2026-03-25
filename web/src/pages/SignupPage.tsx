@@ -17,6 +17,10 @@ export function SignupPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
 
+    function isValidEmail(value: string) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    }
+
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setErrorMessage('');
@@ -25,12 +29,12 @@ export function SignupPage() {
         const trimmedEmail = email.trim();
 
         if (!trimmedUsername || !trimmedEmail || !password || !confirmPassword) {
-            setErrorMessage('Please fill out all fields.');
+            setErrorMessage('Please fill in all fields.');
             return;
         }
 
-        if (password !== confirmPassword) {
-            setErrorMessage('Passwords do not match.');
+        if (!isValidEmail(trimmedEmail)) {
+            setErrorMessage('Please provide a valid email address.');
             return;
         }
 
@@ -39,16 +43,17 @@ export function SignupPage() {
             return;
         }
 
+        if (password !== confirmPassword) {
+            setErrorMessage('Passwords do not match.');
+            return;
+        }
+
         try {
             setIsLoading(true);
-            await signupWithEmail({
-                username: trimmedUsername,
-                email: trimmedEmail,
-                password,
-            });
+            await signupWithEmail({ username: trimmedUsername, email: trimmedEmail, password });
             navigate('/', { replace: true });
         } catch (error) {
-            setErrorMessage(mapAuthError(error));
+            setErrorMessage(mapAuthError(error, 'signup'));
         } finally {
             setIsLoading(false);
         }
@@ -82,10 +87,10 @@ export function SignupPage() {
                         <div className="signup-card-content">
                             <p className="signup-eyebrow">NEW ACCOUNT</p>
                             <h2 className="signup-title">Sign up to get started</h2>
-                            <p className="signup-description">Create your account with a username, email, and password.</p>
+                            <p className="signup-description">Create your account with a username and password.</p>
                             <p className="signup-helper">Already have an account? Log in from the link below.</p>
 
-                            <form className="signup-form" onSubmit={handleSubmit}>
+                            <form className="signup-form" onSubmit={handleSubmit} noValidate>
                                 <label className="signup-label" htmlFor="signup-username">Username</label>
                                 <input
                                     id="signup-username"
@@ -96,7 +101,6 @@ export function SignupPage() {
                                     className="signup-input"
                                     value={username}
                                     onChange={(event) => setUsername(event.target.value)}
-                                    required
                                 />
 
                                 <label className="signup-label" htmlFor="signup-email">Email</label>
@@ -109,7 +113,6 @@ export function SignupPage() {
                                     className="signup-input"
                                     value={email}
                                     onChange={(event) => setEmail(event.target.value)}
-                                    required
                                 />
 
                                 <label className="signup-label" htmlFor="signup-password">Password</label>
@@ -122,7 +125,6 @@ export function SignupPage() {
                                     className="signup-input"
                                     value={password}
                                     onChange={(event) => setPassword(event.target.value)}
-                                    required
                                 />
 
                                 <label className="signup-label" htmlFor="signup-confirm-password">Confirm Password</label>
@@ -135,7 +137,6 @@ export function SignupPage() {
                                     className="signup-input"
                                     value={confirmPassword}
                                     onChange={(event) => setConfirmPassword(event.target.value)}
-                                    required
                                 />
 
                                 {errorMessage && <p className="signup-status signup-status-error">{errorMessage}</p>}
@@ -143,7 +144,7 @@ export function SignupPage() {
                                 <div className="signup-actions">
                                     <button type="submit" className="signup-btn signup-btn-primary" disabled={isLoading}>
                                         <UserPlus size={18} />
-                                        {isLoading ? 'Creating Account...' : 'Sign Up'}
+                                        {isLoading ? 'Signing Up...' : 'Sign Up'}
                                     </button>
 
                                     <button type="button" className="signup-btn signup-btn-facebook" disabled={isLoading}>

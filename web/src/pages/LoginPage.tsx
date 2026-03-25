@@ -15,6 +15,10 @@ export function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
 
+    function isValidEmail(value: string) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    }
+
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setErrorMessage('');
@@ -25,12 +29,17 @@ export function LoginPage() {
             return;
         }
 
+        if (!isValidEmail(trimmedEmail)) {
+            setErrorMessage('Please provide a valid email address.');
+            return;
+        }
+
         try {
             setIsLoading(true);
             await loginWithEmail(trimmedEmail, password);
             navigate('/', { replace: true });
         } catch (error) {
-            setErrorMessage(mapAuthError(error));
+            setErrorMessage(mapAuthError(error, 'login'));
         } finally {
             setIsLoading(false);
         }
@@ -67,7 +76,7 @@ export function LoginPage() {
                             <p className="login-description">Enter your email and password to continue.</p>
                             <p className="login-helper">No account yet? Use Sign Up or Sign Up / Log In with Facebook.</p>
 
-                            <form className="login-form" onSubmit={handleSubmit}>
+                            <form className="login-form" onSubmit={handleSubmit} noValidate>
                                 <label className="login-label" htmlFor="email">Email</label>
                                 <input
                                     id="email"
@@ -78,7 +87,6 @@ export function LoginPage() {
                                     className="login-input"
                                     value={email}
                                     onChange={(event) => setEmail(event.target.value)}
-                                    required
                                 />
 
                                 <label className="login-label" htmlFor="password">Password</label>
@@ -91,7 +99,6 @@ export function LoginPage() {
                                     className="login-input"
                                     value={password}
                                     onChange={(event) => setPassword(event.target.value)}
-                                    required
                                 />
 
                                 {errorMessage && <p className="login-status login-status-error">{errorMessage}</p>}
