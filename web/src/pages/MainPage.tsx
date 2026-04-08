@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'; // React imports
+import { useEffect, useRef, useState } from 'react';
 import { FilterBar } from '../components/FilterBar';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { EventList } from '../components/EventList';
+import { CalendarView } from '../components/Calendar';
 import { Footer } from '../components/Footer';
 import { getEvents, getPages } from '../services/dal';
 import { mapAuthError, onAuthUserChanged, signOutCurrentUser } from '../services/auth';
@@ -12,36 +13,50 @@ import type { AuthUser } from '../services/auth';
 import { Link } from 'react-router-dom';
 import { CircleUserRound, LogOut } from 'lucide-react';
 
-export function MainPage() { // function for main page (can be used in other files bc of export) hej  
-  const [pages, setPages] = useState([] as Page[]); // a variable that holds an array of pages
-  const [events, setEvents] = useState([] as EventType[]); // a variable that holds an array of events
-  const [loading, setLoading] = useState(true); // loading is by defualt true until data is loaded
-  const [error, setError] = useState<string>(''); // errors are empty by default until an error occurs
+export function MainPage() {
+  const [pages, setPages] = useState([] as Page[]);
+  const [events, setEvents] = useState([] as EventType[]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
-  // runs when component is first rendered
+  // organizer filter
+  const [pageIds, setPageIds] = useState<string[]>([]);
+  const [query, setQuery] = useState<string>('');
+  const [debouncedQuery, setDebouncedQuery] = useState<string>('');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
+  const [sortMode, setSortMode] = useState<'newest' | 'upcoming' | 'all'>('upcoming');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+
   useEffect(() => {
-    let cancelled = false; // to avoid setting state on unmounted component
-    (async () => { // function that runs straight away
+    let cancelled = false;
+
+    (async () => {
       try {
-        setLoading(true); // loading is set to true when data fetching starts
-        const [page, event] = await Promise.all([getPages(), getEvents()]); // fetch pages and events in parallel
+        setLoading(true);
+        const [page, event] = await Promise.all([getPages(), getEvents()]);
         if (cancelled) return;
+
         setPages(page);
         setEvents(event);
-      } catch (err) { // error handling
+      } catch (err) {
         if (cancelled) return;
-        const message = (err instanceof Error && err.message) ? err.message : 'Failed to load data';
+        const message =
+          err instanceof Error && err.message ? err.message : 'Failed to load data';
         setError(message);
       } finally {
-        if (!cancelled) setLoading(false); // loading is false when data fetching ends
+        if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true };
-  }, []); // [] at the end means it only runs once when component is mounted
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthUserChanged((user) => {
@@ -55,9 +70,7 @@ export function MainPage() { // function for main page (can be used in other fil
   }, []);
 
   useEffect(() => {
-    if (!isProfileOpen) {
-      return;
-    }
+    if (!isProfileOpen) return;
 
     function handleClickOutside(event: MouseEvent) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
@@ -70,6 +83,14 @@ export function MainPage() { // function for main page (can be used in other fil
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isProfileOpen]);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setDebouncedQuery(query.trim().toLowerCase());
+    }, 250);
+
+    return () => clearTimeout(id);
+  }, [query]);
 
   async function handleSignOut() {
     try {
@@ -86,73 +107,62 @@ export function MainPage() { // function for main page (can be used in other fil
 
   const userLabel = currentUser?.displayName || currentUser?.email || 'My Profile';
 
+  const filteredByPage =
+    pageIds.length > 0 ? events.filter((e) => pageIds.includes(e.pageId)) : events;
 
-  // organizer filter (multi-select)
-  const [pageIds, setPageIds] = useState<string[]>([]);
-  const filteredByPage = pageIds.length > 0 ? events.filter(e => pageIds.includes(e.pageId)) : events;
+  const textFiltered = debouncedQuery
+    ? filteredByPage.filter((event) => {
+        const haystack = (
+          (event.title || '') +
+          ' ' +
+          (event.description || '') +
+          ' ' +
+          (event.place?.name || '')
+        ).toLowerCase();
 
-  const [query, setQuery] = useState<string>(''); // react variable with default empty string
-  const [debouncedQuery, setDebouncedQuery] = useState<string>(''); // only update after user stops typing for 250ms
-  useEffect(() => {
-    const id = setTimeout(() => {
-      setDebouncedQuery(query.trim().toLowerCase()); // makes query lowercase and removes whitespace
-    }, 250); // 250ms delay
-    return () => clearTimeout(id);
-  }, [query]); // runs whenever query changes
+        return haystack.includes(debouncedQuery);
+      })
+    : filteredByPage;
 
-  const textFiltered = debouncedQuery // variable created if debouncedQuery is not empty
-    ? filteredByPage.filter(event => {
-      const haystack = (
-        (event.title || '') + ' ' +
-        (event.description || '') + ' ' +
-        (event.place?.name || '')
-      ).toLowerCase();
-      return haystack.includes(debouncedQuery); // if haystack includes the debouncedQuery then include it in the result
-    })
-    : filteredByPage; // if there is no debouncedQuery then return all events from filteredByPage
+  const fromObj = parseDateOnly(fromDate);
+  const toObj = parseDateOnly(toDate);
+  const invalidRange = !!(fromObj && toObj && toObj < fromObj);
+  const effectiveToObj = invalidRange ? undefined : toObj;
 
-  // date range filter
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
-
-  const fromObj = parseDateOnly(fromDate); // turn fromDate string into date object
-  const toObj = parseDateOnly(toDate); // turn toDate string into date object
-  const invalidRange = !!(fromObj && toObj && toObj < fromObj); // check if range is invalid
-  const effectiveToObj = invalidRange ? undefined : toObj; // if invalid then ignore toDate
-
-  const dateFiltered = textFiltered.filter(event => {
-    const eventMs = new Date(event.startTime).getTime(); // get timestamp of event start time
-    if (fromObj && eventMs < startOfDayMs(fromObj)) return false; // if fromdate is after event start then exclude
-    if (effectiveToObj && eventMs > endOfDayMs(effectiveToObj)) return false; // if todate is before event start then exclude
-
+  const dateFiltered = textFiltered.filter((event) => {
+    const eventMs = new Date(event.startTime).getTime();
+    if (fromObj && eventMs < startOfDayMs(fromObj)) return false;
+    if (effectiveToObj && eventMs > endOfDayMs(effectiveToObj)) return false;
     return true;
   });
 
-  // pick a created/added timestamp from an event (ms)
-  const getCreatedMs = (e: EventType) => { // for each event we 
-    // pick the first available "created/added" timestamp field and fallback to startTime if none exist
-    const maybe = (e as any).createdTime ?? (e as any).createdAt ?? (e as any).postedTime ?? (e as any).insertedAt ?? (e as any).addedAt ?? e.startTime;
-    const ms = Date.parse(maybe); // parse maybe into ms
-    return isNaN(ms) ? new Date(e.startTime).getTime() : ms; // fallback to startTime if parsing fails
+  const getCreatedMs = (e: EventType) => {
+    const maybe =
+      (e as any).createdTime ??
+      (e as any).createdAt ??
+      (e as any).postedTime ??
+      (e as any).insertedAt ??
+      (e as any).addedAt ??
+      e.startTime;
+
+    const ms = Date.parse(maybe);
+    return isNaN(ms) ? new Date(e.startTime).getTime() : ms;
   };
 
-  const [sortMode, setSortMode] = useState<'newest' | 'upcoming' | 'all'>('upcoming'); // 'upcoming' = all (default)
-
-  // build final list with sortMode
   let list = [...dateFiltered];
 
-  // only filter out past events if NOT in 'all' mode
   if (sortMode !== 'all') {
     const now = new Date().getTime();
-    list = list.filter(event => new Date(event.startTime).getTime() >= now); // exclude events that have already started in the past
+    list = list.filter((event) => new Date(event.startTime).getTime() >= now);
   }
 
-  if (sortMode === 'upcoming') { // if upcoming is selected then
-    list = list.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()); // sort by startTime ascending
-  } else if (sortMode === 'newest') { // if it is set to newest then
-    list = list.sort((a, b) => getCreatedMs(b) - getCreatedMs(a)); // sort by createdMs descending (so when they were added)
+  if (sortMode === 'upcoming') {
+    list = list.sort(
+      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    );
+  } else if (sortMode === 'newest') {
+    list = list.sort((a, b) => getCreatedMs(b) - getCreatedMs(a));
   }
-  // if 'all' is selected then no sorting is applied
 
   const count = list.length;
 
@@ -170,7 +180,7 @@ export function MainPage() { // function for main page (can be used in other fil
             <p className="header-subtitle">Discover Technical University of Denmark Events</p>
           </div>
         </div>
-        {/* Auth and theme controls in the upper header */}
+
         <div className="header-toggle relative flex items-center gap-2">
           {currentUser ? (
             <div className="relative" ref={profileMenuRef}>
@@ -187,8 +197,12 @@ export function MainPage() { // function for main page (can be used in other fil
 
               {isProfileOpen && (
                 <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-2 shadow-xl">
-                  <p className="px-2 py-2 text-xs font-semibold text-[var(--text-subtle)]">Signed in as</p>
-                  <p className="truncate px-2 pb-2 text-sm font-semibold text-[var(--text-primary)]">{userLabel}</p>
+                  <p className="px-2 py-2 text-xs font-semibold text-[var(--text-subtle)]">
+                    Signed in as
+                  </p>
+                  <p className="truncate px-2 pb-2 text-sm font-semibold text-[var(--text-primary)]">
+                    {userLabel}
+                  </p>
                   <button
                     type="button"
                     onClick={handleSignOut}
@@ -210,15 +224,14 @@ export function MainPage() { // function for main page (can be used in other fil
               Log In / Sign Up
             </Link>
           )}
+
           <ThemeToggle />
         </div>
       </header>
 
-      {/* Filter and Content Section */}
       <div className="flex-1 px-6 md:px-8 pb-8 max-w-6xl mx-auto w-full">
         <div className="space-y-8">
-          {/* this is where filterbar component receives data and functions */}
-          <FilterBar // renders the filter bar component 
+          <FilterBar
             pages={pages}
             pageIds={pageIds}
             setPageIds={setPageIds}
@@ -233,15 +246,54 @@ export function MainPage() { // function for main page (can be used in other fil
             setSortMode={setSortMode}
           />
 
-          {/* conditional rendering */}
+          {loading && (
+            <p className="text-sm text-[var(--text-subtle)] mb-2 animate-pulse">Loading…</p>
+          )}
 
-          {loading && <p className="text-sm text-[var(--text-subtle)] mb-2 animate-pulse">Loading…</p>}  {/*if loading is true then show loading text*/}
-          {error && <p className="text-sm text-[var(--dtu-accent)] mb-2 font-semibold">{error}</p>} {/* if there is an error then show error message */}
+          {error && (
+            <p className="text-sm text-[var(--dtu-accent)] mb-2 font-semibold">{error}</p>
+          )}
+
           {invalidRange && (
-            <p className="text-xs text-[var(--dtu-accent)] mb-2 font-semibold">End date is before start date. Showing results up to any end date.</p>
-          )} {/* if date range is invalid then show warning message */}
+            <p className="text-xs text-[var(--dtu-accent)] mb-2 font-semibold">
+              End date is before start date. Showing results up to any end date.
+            </p>
+          )}
 
-          <EventList list={list} /> {/* the final list of events shown after all filters have been applied */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+            <div className="text-sm text-[var(--text-subtle)]">
+              {count} event{count === 1 ? '' : 's'} found
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`px-4 py-2 rounded-lg border text-sm font-semibold transition ${
+                  viewMode === 'list'
+                    ? 'bg-[var(--link-primary)] text-white border-transparent'
+                    : 'bg-[var(--panel-bg)] text-[var(--text-primary)] border-[var(--panel-border)] hover:bg-[var(--input-bg)]'
+                }`}
+              >
+                List
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewMode('calendar')}
+                className={`px-4 py-2 rounded-lg border text-sm font-semibold transition ${
+                  viewMode === 'calendar'
+                    ? 'bg-[var(--link-primary)] text-white border-transparent'
+                    : 'bg-[var(--panel-bg)] text-[var(--text-primary)] border-[var(--panel-border)] hover:bg-[var(--input-bg)]'
+                }`}
+              >
+                Calendar
+              </button>
+            </div>
+          </div>
+
+          {viewMode === 'list' ? <EventList list={list} /> : <CalendarView events={list} />}
+
           <div className="flex justify-center">
             <a
               href={buildFacebookLoginUrl()}
@@ -252,6 +304,7 @@ export function MainPage() { // function for main page (can be used in other fil
           </div>
         </div>
       </div>
+
       <Footer />
     </div>
   );
