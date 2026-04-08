@@ -1,4 +1,5 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -13,6 +14,15 @@ const firebaseConfig = {
 
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+let authInstance: Auth | null = null;
+
+export function getAuthInstance(): Auth {
+  if (!authInstance) {
+    authInstance = getAuth(app);
+  }
+  return authInstance;
+}
 
 // If enabled, point the web app at the local Firestore emulator
 // Set VITE_FIRESTORE_EMULATOR=true in web/.env while running `firebase emulators:start`

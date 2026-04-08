@@ -33,33 +33,33 @@ export async function handleCallback(deps: Dependencies, req: Request, res: Resp
     if (!Array.isArray(pages) || pages.length === 0) {
       return HttpStatusUtil.send(res, 200, 'No pages returned.');
     }
-  
+
     for (const page of pages) {
       try {
-          // 5. store page token in Secret Manager
-          console.log(`[CALLBACK] Storing token for page ${page.id}...`);
-          await secretManagerService.addPageToken(page.id, page.accessToken, longLivedToken.expiresIn);
-          console.log(`[CALLBACK] Token stored successfully for page ${page.id}`);
-   
-          // 6. store page "metadata"/info in Firestore
-          const expiresInSeconds = longLivedToken.expiresIn || 5184000; // default to 60 days
-          const tokenExpiresAtIso = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
-          const tokenExpiresInDays = Math.ceil(expiresInSeconds / (60 * 60 * 24));
-          console.log(`[CALLBACK] Storing page metadata for ${page.id}...`);
-          await firestoreService.addPage(page.id, {
-            id: page.id,
-            name: page.name,
-            active: true,
-            url: `https://facebook.com/${page.id}`,
-            connectedAt: new Date().toISOString(),
-            tokenRefreshedAt: firestore.FieldValue.serverTimestamp(),
-            tokenStoredAt: firestore.FieldValue.serverTimestamp(),
-            tokenExpiresAt: tokenExpiresAtIso,
-            tokenExpiresInDays,
-            tokenStatus: 'valid',
-            lastRefreshSuccess: true,
-          });
-          console.log(`[CALLBACK] Page metadata stored successfully for ${page.id}`);
+        // 5. store page token in Secret Manager
+        console.log(`[CALLBACK] Storing token for page ${page.id}...`);
+        await secretManagerService.addPageToken(page.id, page.accessToken, longLivedToken.expiresIn);
+        console.log(`[CALLBACK] Token stored successfully for page ${page.id}`);
+
+        // 6. store page "metadata"/info in Firestore
+        const expiresInSeconds = longLivedToken.expiresIn || 5184000; // default to 60 days
+        const tokenExpiresAtIso = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+        const tokenExpiresInDays = Math.ceil(expiresInSeconds / (60 * 60 * 24));
+        console.log(`[CALLBACK] Storing page metadata for ${page.id}...`);
+        await firestoreService.addPage(page.id, {
+          id: page.id,
+          name: page.name,
+          active: true,
+          url: `https://facebook.com/${page.id}`,
+          connectedAt: new Date().toISOString(),
+          tokenRefreshedAt: firestore.FieldValue.serverTimestamp(),
+          tokenStoredAt: firestore.FieldValue.serverTimestamp(),
+          tokenExpiresAt: tokenExpiresAtIso,
+          tokenExpiresInDays,
+          tokenStatus: 'valid',
+          lastRefreshSuccess: true,
+        });
+        console.log(`[CALLBACK] Page metadata stored successfully for ${page.id}`);
       } catch (e: any) {
         console.error(`[CALLBACK] Failed to store page ${page.id}:`, e.message, e.stack);
         throw e;
@@ -67,13 +67,13 @@ export async function handleCallback(deps: Dependencies, req: Request, res: Resp
     }
     // 7. success! 
     res.send(`Stored ${pages.length} page token(s).`);
-  
+
   } catch (err: any) {
     // fail...
     const msg = err.message || 'Facebook auth failed';
- 
+
     if (String(req.query.debug) === '1') {
-        return HttpStatusUtil.send(res, 500, msg);
+      return HttpStatusUtil.send(res, 500, msg);
     }
     HttpStatusUtil.send(res, 500, 'Facebook auth failed');
   }

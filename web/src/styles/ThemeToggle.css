@@ -1,8 +1,6 @@
 /* SLIDER CONTAINER */
 .theme-slider {
-  /*position: fixed;*/
-  top: 20px;
-  right: 20px;
+  position: relative;
   width: 60px;
   height: 32px;
   display: inline-block;
@@ -37,17 +35,20 @@
   align-items: center;
   justify-content: center;
   transition: transform 0.3s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
   color: #1a1a1a;
 }
 
 /* WHEN DARK MODE IS ON (checked) */
-.theme-slider input:checked + .track {
-  background: #000000; /* Black as fuck */
+.theme-slider input:checked+.track {
+  background: #000000;
+  /* Black as fuck */
 }
 
-.theme-slider input:checked + .track .thumb {
+.theme-slider input:checked+.track .thumb {
   transform: translateX(28px);
-  background: #111; /* dark circle */
-  color: white; /* moon icon visible */
+  background: #111;
+  /* dark circle */
+  color: white;
+  /* moon icon visible */
 }

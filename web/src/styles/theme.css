@@ -1,16 +1,22 @@
-
 /* Layout */
-html, body { margin: 0; padding: 0; height: 100%; }
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
 
 /* Light gradient - DTU Salmon theme */
-html, html body {
+html,
+html body {
   background: linear-gradient(135deg, #FFF9F7 0%, #F5EAE8 25%, #FCF5F0 65%, #FFFBFA 100%);
   background-attachment: fixed;
 }
 
 /* Dark gradient - DTU Dark Blue theme */
-html.dark, html.dark body {
-  background: linear-gradient(135deg,#0a0a0a 0%,#1a0a14 25%,#1a1f3a 60%,#0a0a0a 100%);
+html.dark,
+html.dark body {
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a0a14 25%, #1a1f3a 60%, #0a0a0a 100%);
   background-attachment: fixed;
 }
 
@@ -25,19 +31,19 @@ html.dark, html.dark body {
   --dtu-accent: #E85D3B;
   --dtu-accent-light: #F5B8A6;
   --dtu-accent-hover: #D84D2B;
-  
+
   /* Header - Light Mode */
   --header-bg: #F5B8A6;
   --header-bg-secondary: #FAD8CF;
   --header-text: #1F1F1F;
   --header-subtitle: #6B6B6B;
   --header-shadow: 0 8px 24px rgba(245, 184, 166, 0.12);
-  
+
   /* Text - Light Mode */
   --text-primary: #1F1F1F;
   --text-body: #444444;
   --text-subtle: #777777;
-  
+
   /* UI Elements - Light Mode */
   --panel-bg: rgba(255, 255, 255, 0.9);
   --panel-border: #E8D5D0;
@@ -48,7 +54,7 @@ html.dark, html.dark body {
   --button-hover: rgba(232, 93, 59, 0.1);
   --shadow-color: rgba(139, 69, 19, 0.12);
   --shadow-color-hover: rgba(139, 69, 19, 0.18);
-  
+
   /* Links - Light Mode */
   --link-primary: #E85D3B;
   --link-primary-hover: #D84D2B;
@@ -63,19 +69,19 @@ html.dark {
   --dtu-accent: #3C54F0;
   --dtu-accent-light: #5E73FF;
   --dtu-accent-hover: #3347D2;
-  
+
   /* Header - Dark Mode */
-  --header-bg: linear-gradient(135deg,#0a0a0a 0%,#1a0a14 25%,#1a1f3a 60%,#0a0a0a 100%);
+  --header-bg: linear-gradient(135deg, #0a0a0a 0%, #1a0a14 25%, #1a1f3a 60%, #0a0a0a 100%);
   --header-bg-secondary: #0A1F6A;
   --header-text: #FFFFFF;
   --header-subtitle: #A8AFBE;
   --header-shadow: 0 8px 40px rgba(255, 255, 255, 0.25);
-  
+
   /* Text - Dark Mode */
   --text-primary: #FFFFFF;
   --text-body: #D5D8E0;
   --text-subtle: #8C92A5;
-  
+
   /* UI Elements - Dark Mode */
   --panel-bg: rgba(18, 20, 36, 0.7);
   --panel-border: rgba(255, 255, 255, 0.25);
@@ -87,7 +93,7 @@ html.dark {
 
   --shadow-color: rgba(40, 60, 140, 0.25);
   --shadow-color-hover: rgba(255, 255, 255, 0.25);
-  
+
   /* Links - Dark Mode */
   --link-primary: #1E3FF2;
   --link-primary-hover: #4B6FFF;
@@ -96,9 +102,17 @@ html.dark {
 /* ===== BASE STYLES ===== */
 
 /* Text Classes */
-.text-primary { color: var(--text-primary); }
-.text-body { color: var(--text-body); }
-.text-subtle { color: var(--text-subtle); }
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-body {
+  color: var(--text-body);
+}
+
+.text-subtle {
+  color: var(--text-subtle);
+}
 
 /* ===== HEADER STYLING ===== */
 
@@ -144,13 +158,15 @@ html.dark {
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 1rem; /* reduced gap for a flatter header */
+  gap: 1rem;
+  /* reduced gap for a flatter header */
   max-width: 1344px;
   margin: 0 auto;
 }
 
 .header-logo {
-  width: 3.5rem; /* 56px - smaller, crisper */
+  width: 3.5rem;
+  /* 56px - smaller, crisper */
   height: 3.5rem;
   object-fit: cover;
   border-radius: 0.5rem;
@@ -171,11 +187,16 @@ html.dark {
   z-index: 30;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 @media (max-width: 640px) {
-  .header-toggle { top: 8px; right: 12px; }
+  .header-toggle {
+    top: 8px;
+    right: 12px;
+    gap: 0.35rem;
+  }
 }
 
 .header-text {
@@ -202,25 +223,27 @@ html.dark {
 /* Responsive header */
 @media (max-width: 640px) {
   .page-header {
-    padding: 16px 12px; /* slightly smaller on mobile */
-    padding-right: 12px; /* don't reserve large right padding on small screens */
+    padding: 16px 12px;
+    /* slightly smaller on mobile */
+    padding-right: 12px;
+    /* don't reserve large right padding on small screens */
   }
-  
+
   .header-content {
     gap: 1rem;
     flex-wrap: wrap;
     justify-content: center;
   }
-  
+
   .header-logo {
     width: 3rem;
     height: 3rem;
   }
-  
+
   .header-title {
     font-size: 1.875rem;
   }
-  
+
   .header-text {
     text-align: center;
     flex: 1 100%;
@@ -228,9 +251,9 @@ html.dark {
 }
 
 /* Containers */
-.page { 
-  min-height: 100vh; 
-  color: var(--text-primary); 
+.page {
+  min-height: 100vh;
+  color: var(--text-primary);
 }
 
 .panel,
@@ -368,6 +391,10 @@ html.dark .btn-primary:hover {
   transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
 }
 
-button, a, input, select, textarea {
+button,
+a,
+input,
+select,
+textarea {
   transition: all 200ms ease;
 }
