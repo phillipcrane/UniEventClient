@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
 // Fake Firestore helpers so we can test behavior without real network/database calls.
 const mockDoc = vi.fn();
@@ -26,6 +26,16 @@ vi.mock('firebase/firestore', () => ({
 import { getEventById, getEvents, getPages } from '../../services/dal';
 
 describe('dal service', () => {
+    beforeAll(() => {
+        // Force the Firestore code path so these tests exercise the mapping logic.
+        vi.stubEnv('VITE_USE_FIRESTORE', 'true');
+    });
+
+    afterAll(() => {
+        // Restore original env vars so other test suites are not affected.
+        vi.unstubAllEnvs();
+    });
+
     beforeEach(() => {
         // Reset all fake calls before each test so tests stay independent.
         mockDoc.mockReset();
