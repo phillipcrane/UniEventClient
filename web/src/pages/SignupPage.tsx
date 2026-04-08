@@ -147,9 +147,15 @@ export function SignupPage() {
                                         {isLoading ? 'Signing Up...' : 'Sign Up'}
                                     </button>
 
-                                    <button type="button" className="signup-btn signup-btn-facebook" disabled={isLoading}>
+                                    <button
+                                        type="button"
+                                        className="signup-btn signup-btn-facebook"
+                                        disabled
+                                        aria-disabled="true"
+                                        title="Facebook sign up is not available yet"
+                                    >
                                         <Facebook size={22} strokeWidth={2.35} />
-                                        Sign Up with Facebook
+                                        Facebook Sign Up Coming Soon
                                     </button>
                                 </div>
                             </form>
