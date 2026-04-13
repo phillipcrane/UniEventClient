@@ -6,7 +6,6 @@ import { CalendarView } from '../components/Calendar';
 import { Footer } from '../components/Footer';
 import { getEvents, getPages } from '../services/dal';
 import { mapAuthError, onAuthUserChanged, signOutCurrentUser } from '../services/auth';
-import { buildFacebookLoginUrl } from '../services/facebook';
 import { parseDateOnly, startOfDayMs, endOfDayMs } from '../utils/dateUtils';
 import type { Event as EventType, Page } from '../types';
 import type { AuthUser } from '../services/auth';
@@ -112,16 +111,16 @@ export function MainPage() {
 
   const textFiltered = debouncedQuery
     ? filteredByPage.filter((event) => {
-        const haystack = (
-          (event.title || '') +
-          ' ' +
-          (event.description || '') +
-          ' ' +
-          (event.place?.name || '')
-        ).toLowerCase();
+      const haystack = (
+        (event.title || '') +
+        ' ' +
+        (event.description || '') +
+        ' ' +
+        (event.place?.name || '')
+      ).toLowerCase();
 
-        return haystack.includes(debouncedQuery);
-      })
+      return haystack.includes(debouncedQuery);
+    })
     : filteredByPage;
 
   const fromObj = parseDateOnly(fromDate);
@@ -187,12 +186,11 @@ export function MainPage() {
               <button
                 type="button"
                 onClick={() => setIsProfileOpen((open) => !open)}
-                className="inline-flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] sm:px-4 sm:text-sm"
-                aria-label="Open profile menu"
+                className="inline-flex items-center justify-center rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)]"
+                aria-label="Open account menu"
                 aria-expanded={isProfileOpen}
               >
                 <CircleUserRound size={18} />
-                <span className="hidden sm:inline">Profile</span>
               </button>
 
               {isProfileOpen && (
@@ -203,14 +201,22 @@ export function MainPage() {
                   <p className="truncate px-2 pb-2 text-sm font-semibold text-[var(--text-primary)]">
                     {userLabel}
                   </p>
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsProfileOpen(false)}
+                    className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)]"
+                  >
+                    <CircleUserRound size={16} />
+                    Profile
+                  </Link>
                   <button
                     type="button"
                     onClick={handleSignOut}
                     disabled={isSigningOut}
-                    className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     <LogOut size={16} />
-                    {isSigningOut ? 'Signing out...' : 'Sign out'}
+                    {isSigningOut ? 'Signing out...' : 'Log out'}
                   </button>
                 </div>
               )}
@@ -269,11 +275,10 @@ export function MainPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                className={`px-4 py-2 rounded-lg border text-sm font-semibold transition ${
-                  viewMode === 'list'
+                className={`px-4 py-2 rounded-lg border text-sm font-semibold transition ${viewMode === 'list'
                     ? 'bg-[var(--link-primary)] text-white border-transparent'
                     : 'bg-[var(--panel-bg)] text-[var(--text-primary)] border-[var(--panel-border)] hover:bg-[var(--input-bg)]'
-                }`}
+                  }`}
               >
                 List
               </button>
@@ -281,11 +286,10 @@ export function MainPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('calendar')}
-                className={`px-4 py-2 rounded-lg border text-sm font-semibold transition ${
-                  viewMode === 'calendar'
+                className={`px-4 py-2 rounded-lg border text-sm font-semibold transition ${viewMode === 'calendar'
                     ? 'bg-[var(--link-primary)] text-white border-transparent'
                     : 'bg-[var(--panel-bg)] text-[var(--text-primary)] border-[var(--panel-border)] hover:bg-[var(--input-bg)]'
-                }`}
+                  }`}
               >
                 Calendar
               </button>
@@ -294,14 +298,6 @@ export function MainPage() {
 
           {viewMode === 'list' ? <EventList list={list} /> : <CalendarView events={list} />}
 
-          <div className="flex justify-center">
-            <a
-              href={buildFacebookLoginUrl()}
-              className="bg-[var(--link-primary)] hover:bg-[var(--link-primary-hover)] text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-            >
-              Connect Facebook Page
-            </a>
-          </div>
         </div>
       </div>
 
