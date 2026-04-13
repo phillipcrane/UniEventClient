@@ -1,9 +1,12 @@
-import { FirebaseError } from 'firebase/app';
-import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile, type User } from 'firebase/auth';
-import { getAuthInstance } from './firebase';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+const TOKEN_KEY = 'unievent_token';
+const USER_KEY = 'unievent_user';
 
-export type AuthUser = User;
-type AuthErrorContext = 'login' | 'signup' | 'general';
+export type AuthUser = {
+    username: string;
+    email: string;
+    token: string;
+};
 
 type SignupInput = {
     username: string;
@@ -11,76 +14,110 @@ type SignupInput = {
     password: string;
 };
 
-export async function loginWithEmail(email: string, password: string) {
-    const auth = getAuthInstance();
-    const credential = await signInWithEmailAndPassword(auth, email, password);
-    return credential.user;
+type AuthErrorContext = 'login' | 'signup' | 'general';
+
+// Module-level listener list for auth state subscriptions
+const listeners: Array<(user: AuthUser | null) => void> = [];
+
+function notifyListeners(user: AuthUser | null): void {
+    listeners.forEach((cb) => cb(user));
 }
 
-export async function signupWithEmail({ username, email, password }: SignupInput) {
-    const auth = getAuthInstance();
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    const trimmedUsername = username.trim();
-
-    if (trimmedUsername) {
-        await updateProfile(credential.user, { displayName: trimmedUsername });
-    }
-
-    return credential.user;
+function persistUser(user: AuthUser): void {
+    localStorage.setItem(TOKEN_KEY, user.token);
+    localStorage.setItem(USER_KEY, JSON.stringify({ username: user.username, email: user.email }));
 }
 
-export function onAuthUserChanged(callback: (user: AuthUser | null) => void) {
-    const auth = getAuthInstance();
-    return onAuthStateChanged(auth, callback);
+function clearUser(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
 }
 
-export async function signOutCurrentUser() {
-    const auth = getAuthInstance();
-    await signOut(auth);
+export function getCurrentUser(): AuthUser | null {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const raw = localStorage.getItem(USER_KEY);
+    if (!token || !raw) return null;
+    try {
+        const { username, email } = JSON.parse(raw) as { username: string; email: string };
+        return { username, email, token };
+    } catch {
+        return null;
+    }
 }
 
-export function mapAuthError(error: unknown, context: AuthErrorContext = 'general'): string {
-    if (error instanceof Error && error.message.includes('Missing Firebase env variables:')) {
-        return error.message;
+export function getAuthToken(): string | null {
+    return localStorage.getItem(TOKEN_KEY);
+}
+
+export async function loginWithEmail(email: string, password: string): Promise<AuthUser> {
+    const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+        throw { status: response.status, message: (body['message'] as string | undefined) ?? response.statusText };
     }
 
-    if (error instanceof Error && error.message.includes('auth/invalid-api-key')) {
-        return 'Firebase Auth is not configured correctly (invalid API key).';
+    const data = await response.json() as { token: string; username: string; email: string };
+    const user: AuthUser = { token: data.token, username: data.username, email: data.email };
+    persistUser(user);
+    notifyListeners(user);
+    return user;
+}
+
+export async function signupWithEmail({ username, email, password }: SignupInput): Promise<AuthUser> {
+    const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }),
+    });
+
+    if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+        throw { status: response.status, message: (body['message'] as string | undefined) ?? response.statusText };
     }
 
-    if (!(error instanceof FirebaseError)) {
-        return 'Something went wrong. Please try again.';
-    }
+    const data = await response.json() as { token: string; username: string; email: string };
+    const user: AuthUser = { token: data.token, username: data.username, email: data.email };
+    persistUser(user);
+    notifyListeners(user);
+    return user;
+}
 
-    switch (error.code) {
-        case 'auth/operation-not-allowed':
-            return 'Email/password sign-in is disabled in Firebase Authentication. Enable it in Firebase Console -> Authentication -> Sign-in method.';
-        case 'auth/configuration-not-found':
-            return 'Authentication provider configuration is missing in Firebase Console.';
-        case 'auth/invalid-email':
-            if (context === 'login') {
-                return 'Invalid email or password.';
-            }
-            return 'The email address is invalid.';
-        case 'auth/user-disabled':
-            return 'This account has been disabled.';
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
+export function onAuthUserChanged(callback: (user: AuthUser | null) => void): () => void {
+    listeners.push(callback);
+    // fire immediately with current state
+    callback(getCurrentUser());
+    return () => {
+        const idx = listeners.indexOf(callback);
+        if (idx !== -1) listeners.splice(idx, 1);
+    };
+}
+
+export async function signOutCurrentUser(): Promise<void> {
+    clearUser();
+    notifyListeners(null);
+}
+
+export function mapAuthError(error: unknown, _context: AuthErrorContext = 'general'): string {
+    if (error && typeof error === 'object') {
+        const e = error as { status?: number; message?: string };
+        if (e.status === 401 || e.status === 403) {
             return 'Invalid email or password.';
-        case 'auth/email-already-in-use':
-            return 'This email is already in use.';
-        case 'auth/weak-password':
-            return 'Password must be at least 6 characters.';
-        case 'auth/too-many-requests':
-            return 'Too many attempts. Please wait and try again.';
-        case 'auth/network-request-failed':
-            return 'Network error. Check your connection and try again.';
-        case 'auth/admin-restricted-operation':
-            return 'This operation is restricted by Firebase project settings.';
-        case 'auth/unauthorized-domain':
-            return 'Current domain is not authorized for Firebase Auth. Add localhost in Firebase Console -> Authentication -> Settings -> Authorized domains.';
-        default:
-            return `Authentication failed (${error.code}). Please verify Firebase Authentication settings.`;
+        }
+        if (e.status === 409 || (e.status !== undefined && e.message && e.message.toLowerCase().includes('already'))) {
+            return e.message ?? 'Account already exists.';
+        }
+        if (e.status === 400) {
+            return e.message ?? 'Invalid input. Please check your details.';
+        }
+        // Only surface the message when it came from our backend (has a known status code).
+        if (e.status !== undefined && e.message) {
+            return e.message;
+        }
     }
+    return 'Something went wrong. Please try again.';
 }

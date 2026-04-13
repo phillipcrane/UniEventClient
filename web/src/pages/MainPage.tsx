@@ -5,20 +5,20 @@ import { EventList } from '../components/EventList';
 import { CalendarView } from '../components/Calendar';
 import { Footer } from '../components/Footer';
 import { getEvents, getPages } from '../services/dal';
-import { mapAuthError, onAuthUserChanged, signOutCurrentUser } from '../services/auth';
+import { mapAuthError, signOutCurrentUser } from '../services/auth';
 import { buildFacebookLoginUrl } from '../services/facebook';
 import { parseDateOnly, startOfDayMs, endOfDayMs } from '../utils/dateUtils';
 import type { Event as EventType, Page } from '../types';
-import type { AuthUser } from '../services/auth';
 import { Link } from 'react-router-dom';
 import { CircleUserRound, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export function MainPage() {
+  const { currentUser } = useAuth();
   const [pages, setPages] = useState([] as Page[]);
   const [events, setEvents] = useState([] as EventType[]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -59,17 +59,6 @@ export function MainPage() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthUserChanged((user) => {
-      setCurrentUser(user);
-      if (!user) {
-        setIsProfileOpen(false);
-      }
-    });
-
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
     if (!isProfileOpen) return;
 
     function handleClickOutside(event: MouseEvent) {
@@ -105,7 +94,7 @@ export function MainPage() {
     }
   }
 
-  const userLabel = currentUser?.displayName || currentUser?.email || 'My Profile';
+  const userLabel = currentUser?.username || currentUser?.email || 'My Profile';
 
   const filteredByPage =
     pageIds.length > 0 ? events.filter((e) => pageIds.includes(e.pageId)) : events;

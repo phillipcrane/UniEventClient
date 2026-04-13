@@ -6,8 +6,15 @@
  */
 
 import type { Event, Page, Place } from '../types';
+import { getAuthToken } from './auth';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+
+/** Returns the Authorization header if a JWT token is stored, otherwise empty object. */
+export function authHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 interface ApiResponse<T> {
   content: T[];
