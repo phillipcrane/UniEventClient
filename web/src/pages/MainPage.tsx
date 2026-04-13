@@ -6,7 +6,6 @@ import { CalendarView } from '../components/Calendar';
 import { Footer } from '../components/Footer';
 import { getEvents, getPages } from '../services/dal';
 import { mapAuthError, onAuthUserChanged, signOutCurrentUser } from '../services/auth';
-import { buildFacebookLoginUrl } from '../services/facebook';
 import { parseDateOnly, startOfDayMs, endOfDayMs } from '../utils/dateUtils';
 import type { Event as EventType, Page } from '../types';
 import type { AuthUser } from '../services/auth';
@@ -299,14 +298,6 @@ export function MainPage() {
 
           {viewMode === 'list' ? <EventList list={list} /> : <CalendarView events={list} />}
 
-          <div className="flex justify-center">
-            <a
-              href={buildFacebookLoginUrl()}
-              className="bg-[var(--link-primary)] hover:bg-[var(--link-primary-hover)] text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-            >
-              Connect Facebook Page
-            </a>
-          </div>
         </div>
       </div>
 

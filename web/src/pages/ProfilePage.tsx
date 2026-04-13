@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Footer } from '../components/Footer';
 import { getStoredAccountRole, getStoredOrganizerNames, onAuthUserChanged, signOutCurrentUser, type AuthUser } from '../services/auth';
+import { buildFacebookLoginUrl } from '../services/facebook';
 import { CalendarDays, CircleUserRound, Heart, LogOut, MapPin, Ticket } from 'lucide-react';
 
 function buildUsername(user: AuthUser | null) {
@@ -163,6 +164,28 @@ export function ProfilePage() {
                         Back to Events
                     </Link>
                 </div>
+
+                {accountRole === 'organizer' && (
+                    <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-6 shadow-lg">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
+                                    Facebook Integration
+                                </p>
+                                <h3 className="mt-1 text-lg font-bold text-[var(--text-primary)]">
+                                    Connect your Facebook Page
+                                </h3>
+                            </div>
+
+                            <a
+                                href={buildFacebookLoginUrl()}
+                                className="inline-flex items-center justify-center rounded-lg bg-[var(--link-primary)] px-6 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[var(--link-primary-hover)]"
+                            >
+                                Connect Facebook Page
+                            </a>
+                        </div>
+                    </section>
+                )}
 
                 <section className="mx-auto mt-8 max-w-5xl rounded-3xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-6 md:p-8 shadow-xl">
                     <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
