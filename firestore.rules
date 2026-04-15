@@ -23,9 +23,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // User profile data (role and organizer memberships)
+    // User profile data — users may only update their own liked-events list
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['likedItemIds', 'updatedAt']);
     }
 
     // Default deny

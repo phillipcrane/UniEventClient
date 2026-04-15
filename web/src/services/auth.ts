@@ -3,6 +3,10 @@ import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndP
 import { db, getAuthInstance } from './firebase';
 import type { FieldValue, Timestamp } from 'firebase/firestore';
 
+function isFirestoreEnabled(): boolean {
+    return import.meta.env.VITE_USE_FIRESTORE?.toLowerCase() === 'true';
+}
+
 export type AuthUser = User;
 type AuthErrorContext = 'login' | 'signup' | 'general';
 export type AccountRole = 'user' | 'organizer';
@@ -66,13 +70,18 @@ export async function getAccountProfile(uid: string | null | undefined): Promise
 
     const fallbackProfile = accountProfileCache.get(uid) ?? { role: 'user', organizerNames: [] };
 
+    if (!isFirestoreEnabled()) {
+        return fallbackProfile;
+    }
+
     try {
         const { doc, getDoc } = await import('firebase/firestore');
         const profileDoc = await getDoc(doc(db, 'users', uid));
 
         if (profileDoc.exists()) {
             const data = profileDoc.data() as Record<string, unknown>;
-            const firestoreProfile = buildProfilePayload(data.orgenizer === true ? 'organizer' : data.role, data.organizerNames);
+            const role = data.organizer === true || data.orgenizer === true ? 'organizer' : data.role;
+            const firestoreProfile = buildProfilePayload(role, data.organizerNames);
             saveAccountProfileInMemory(uid, firestoreProfile);
             return firestoreProfile;
         }
@@ -116,19 +125,22 @@ export async function signupWithEmail({ username, email, password, role = 'user'
     }
 
     if (credential.user?.uid) {
-        const { doc, serverTimestamp, setDoc } = await import('firebase/firestore');
-        const userDoc: Omit<UserDto, 'createdAt'> & { createdAt: Timestamp | FieldValue } = {
-            uid: credential.user.uid,
-            name: trimmedUsername || credential.user.displayName || '',
-            email: credential.user.email || email,
-            orgenizer: profile.role === 'organizer',
-            createdAt: serverTimestamp(),
-            likedItemIds: [],
-            organizerNames: profile.organizerNames,
-        };
-
-        await setDoc(doc(db, 'users', credential.user.uid), userDoc, { merge: true });
         saveAccountProfileInMemory(credential.user.uid, profile);
+
+        if (isFirestoreEnabled()) {
+            const { doc, serverTimestamp, setDoc } = await import('firebase/firestore');
+            const userDoc: Omit<UserDto, 'createdAt'> & { createdAt: Timestamp | FieldValue } = {
+                uid: credential.user.uid,
+                name: trimmedUsername || credential.user.displayName || '',
+                email: credential.user.email || email,
+                organizer: profile.role === 'organizer',
+                createdAt: serverTimestamp(),
+                likedItemIds: [],
+                organizerNames: profile.organizerNames,
+            };
+
+            await setDoc(doc(db, 'users', credential.user.uid), userDoc, { merge: true });
+        }
     }
 
     return credential.user;

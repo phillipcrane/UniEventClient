@@ -50,6 +50,7 @@ import {
 describe('auth service', () => {
     beforeEach(() => {
         // Start each test with clean fake functions to avoid cross-test noise.
+        vi.unstubAllEnvs();
         mockSignInWithEmailAndPassword.mockReset();
         mockCreateUserWithEmailAndPassword.mockReset();
         mockUpdateProfile.mockReset();
@@ -87,6 +88,7 @@ describe('auth service', () => {
 
     it('signs up and stores display name when username is provided', async () => {
         // Checks signup trims the username and saves it as display name.
+        vi.stubEnv('VITE_USE_FIRESTORE', 'true');
         const fakeUser = { uid: 'user-2' };
         mockCreateUserWithEmailAndPassword.mockResolvedValueOnce({ user: fakeUser });
 
@@ -200,6 +202,7 @@ describe('auth service', () => {
     });
 
     it('reads account profile from Firestore when available', async () => {
+        vi.stubEnv('VITE_USE_FIRESTORE', 'true');
         mockGetDoc.mockResolvedValueOnce({
             exists: () => true,
             data: () => ({ organizer: true, organizerNames: ['UniEvent Core Team'] }),
@@ -210,5 +213,12 @@ describe('auth service', () => {
         expect(profile).toEqual({ role: 'organizer', organizerNames: ['UniEvent Core Team'] });
         expect(getStoredAccountRole('firestore-user')).toBe('organizer');
         expect(getStoredOrganizerNames('firestore-user')).toEqual(['UniEvent Core Team']);
+    });
+
+    it('skips Firestore when VITE_USE_FIRESTORE is not true', async () => {
+        const profile = await getAccountProfile('some-user');
+
+        expect(mockGetDoc).not.toHaveBeenCalled();
+        expect(profile).toEqual({ role: 'user', organizerNames: [] });
     });
 });
