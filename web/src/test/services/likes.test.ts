@@ -67,4 +67,20 @@ describe('likes service', () => {
         await expect(toggleLikedEvent('user-c', 'event-9')).resolves.toBe(true);
         await expect(isEventLiked('user-c', 'event-9')).resolves.toBe(true);
     });
+
+    it('keeps optimistic toggle when setDoc fails after successful getDoc', async () => {
+        vi.stubEnv('VITE_USE_FIRESTORE', 'true');
+        mockSetDoc.mockRejectedValueOnce(new Error('write-failed'));
+
+        await expect(toggleLikedEvent('user-d', 'event-10')).resolves.toBe(true);
+        await expect(isEventLiked('user-d', 'event-10')).resolves.toBe(true);
+    });
+
+    it('keeps optimistic un-toggle when setDoc fails after successful getDoc', async () => {
+        vi.stubEnv('VITE_USE_FIRESTORE', 'true');
+        usersStore.set('user-e', { likedItemIds: ['event-11'] });
+        mockSetDoc.mockRejectedValueOnce(new Error('write-failed'));
+
+        await expect(toggleLikedEvent('user-e', 'event-11')).resolves.toBe(false);
+    });
 });

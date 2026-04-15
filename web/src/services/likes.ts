@@ -89,14 +89,18 @@ export async function toggleLikedEvent(uid: string, eventId: string): Promise<bo
 
         const nextLiked = applyToggle(normalizeStringArray(existingData.likedItemIds));
 
-        await setDoc(
-            userRef,
-            {
-                likedItemIds: getCachedLikes(uid),
-                updatedAt: serverTimestamp(),
-            },
-            { merge: true }
-        );
+        try {
+            await setDoc(
+                userRef,
+                {
+                    likedItemIds: getCachedLikes(uid),
+                    updatedAt: serverTimestamp(),
+                },
+                { merge: true }
+            );
+        } catch (writeError) {
+            console.warn('Firestore write failed; keeping optimistic in-memory state.', writeError);
+        }
 
         return nextLiked;
     } catch (error) {
