@@ -202,7 +202,7 @@ describe('auth service', () => {
     it('reads account profile from Firestore when available', async () => {
         mockGetDoc.mockResolvedValueOnce({
             exists: () => true,
-            data: () => ({ orgenizer: true, organizerNames: ['UniEvent Core Team'] }),
+            data: () => ({ organizer: true, organizerNames: ['UniEvent Core Team'] }),
         });
 
         const profile = await getAccountProfile('firestore-user');
