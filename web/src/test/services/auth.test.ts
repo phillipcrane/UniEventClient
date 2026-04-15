@@ -105,7 +105,7 @@ describe('auth service', () => {
         expect(mockSetDoc).toHaveBeenCalled();
         expect(mockSetDoc.mock.calls[0]?.[1]).toMatchObject({
             uid: 'user-2',
-            orgenizer: true,
+            organizer: true,
             likedItemIds: [],
         });
         expect(user).toBe(fakeUser);
