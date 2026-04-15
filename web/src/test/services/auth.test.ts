@@ -9,6 +9,10 @@ const mockUpdateProfile = vi.fn();
 const mockOnAuthStateChanged = vi.fn();
 const mockSignOut = vi.fn();
 const mockGetAuthInstance = vi.fn(() => mockAuthInstance);
+const mockDoc = vi.fn();
+const mockSetDoc = vi.fn();
+const mockGetDoc = vi.fn();
+const mockServerTimestamp = vi.fn(() => 'mock-server-timestamp');
 
 // Replace real Firebase auth calls with controllable fake functions.
 vi.mock('firebase/auth', () => ({
@@ -19,12 +23,21 @@ vi.mock('firebase/auth', () => ({
     signOut: (...args: unknown[]) => mockSignOut(...args),
 }));
 
+vi.mock('firebase/firestore', () => ({
+    doc: (...args: unknown[]) => mockDoc(...args),
+    setDoc: (...args: unknown[]) => mockSetDoc(...args),
+    getDoc: (...args: unknown[]) => mockGetDoc(...args),
+    serverTimestamp: () => mockServerTimestamp(),
+}));
+
 // Replace local Firebase setup with a fake auth instance.
 vi.mock('../../services/firebase', () => ({
+    db: { name: 'fake-db' },
     getAuthInstance: () => mockGetAuthInstance(),
 }));
 
 import {
+    getAccountProfile,
     getStoredAccountRole,
     getStoredOrganizerNames,
     loginWithEmail,
@@ -43,6 +56,13 @@ describe('auth service', () => {
         mockOnAuthStateChanged.mockReset();
         mockSignOut.mockReset();
         mockGetAuthInstance.mockClear();
+        mockDoc.mockReset();
+        mockSetDoc.mockReset();
+        mockGetDoc.mockReset();
+        mockServerTimestamp.mockClear();
+        mockDoc.mockImplementation((...args: unknown[]) => ({ args }));
+        mockSetDoc.mockResolvedValue(undefined);
+        mockGetDoc.mockResolvedValue({ exists: () => false });
         window.localStorage.clear();
     });
 
@@ -82,6 +102,12 @@ describe('auth service', () => {
         expect(mockUpdateProfile).toHaveBeenCalledWith(fakeUser, { displayName: 'Alice' });
         expect(getStoredAccountRole('user-2')).toBe('organizer');
         expect(getStoredOrganizerNames('user-2')).toEqual(['UniEvent Core Team', 'DTU Campus Events']);
+        expect(mockSetDoc).toHaveBeenCalled();
+        expect(mockSetDoc.mock.calls[0]?.[1]).toMatchObject({
+            uid: 'user-2',
+            orgenizer: true,
+            likedItemIds: [],
+        });
         expect(user).toBe(fakeUser);
     });
 
@@ -171,5 +197,18 @@ describe('auth service', () => {
 
     it('defaults to no organizations when none are saved', () => {
         expect(getStoredOrganizerNames('unknown-user')).toEqual([]);
+    });
+
+    it('reads account profile from Firestore when available', async () => {
+        mockGetDoc.mockResolvedValueOnce({
+            exists: () => true,
+            data: () => ({ orgenizer: true, organizerNames: ['UniEvent Core Team'] }),
+        });
+
+        const profile = await getAccountProfile('firestore-user');
+
+        expect(profile).toEqual({ role: 'organizer', organizerNames: ['UniEvent Core Team'] });
+        expect(getStoredAccountRole('firestore-user')).toBe('organizer');
+        expect(getStoredOrganizerNames('firestore-user')).toEqual(['UniEvent Core Team']);
     });
 });

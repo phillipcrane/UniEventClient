@@ -1,13 +1,28 @@
 import { FirebaseError } from 'firebase/app';
 import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile, type User } from 'firebase/auth';
-import { getAuthInstance } from './firebase';
+import { db, getAuthInstance } from './firebase';
+import type { FieldValue, Timestamp } from 'firebase/firestore';
 
 export type AuthUser = User;
 type AuthErrorContext = 'login' | 'signup' | 'general';
 export type AccountRole = 'user' | 'organizer';
 
-const ACCOUNT_ROLE_STORAGE_KEY = 'unievent.accountRoles';
-const ORGANIZER_NAMES_STORAGE_KEY = 'unievent.organizerNames';
+export type UserDto = {
+    uid: string;
+    name: string;
+    email: string;
+    orgenizer: boolean;
+    createdAt: Timestamp | null;
+    likedItemIds: string[];
+    organizerNames?: string[];
+};
+
+export type AccountProfile = {
+    role: AccountRole;
+    organizerNames: string[];
+};
+
+const accountProfileCache = new Map<string, AccountProfile>();
 
 type SignupInput = {
     username: string;
@@ -17,76 +32,53 @@ type SignupInput = {
     organizerNames?: string[];
 };
 
-function readStoredRoleMap(): Record<string, AccountRole> {
-    if (typeof window === 'undefined') {
-        return {};
+function normalizeAccountRole(value: unknown): AccountRole {
+    return value === 'organizer' ? 'organizer' : 'user';
+}
+
+function normalizeOrganizerNames(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+        return [];
     }
+
+    return value
+        .map((name) => (typeof name === 'string' ? name.trim() : ''))
+        .filter((name): name is string => !!name);
+}
+
+function buildProfilePayload(role: unknown, organizerNames: unknown): AccountProfile {
+    return {
+        role: normalizeAccountRole(role),
+        organizerNames: normalizeOrganizerNames(organizerNames),
+    };
+}
+
+function saveAccountProfileInMemory(uid: string, profile: AccountProfile) {
+    accountProfileCache.set(uid, profile);
+}
+
+export async function getAccountProfile(uid: string | null | undefined): Promise<AccountProfile> {
+    if (!uid) {
+        return { role: 'user', organizerNames: [] };
+    }
+
+    const fallbackProfile = accountProfileCache.get(uid) ?? { role: 'user', organizerNames: [] };
 
     try {
-        const raw = window.localStorage.getItem(ACCOUNT_ROLE_STORAGE_KEY);
-        if (!raw) {
-            return {};
-        }
+        const { doc, getDoc } = await import('firebase/firestore');
+        const profileDoc = await getDoc(doc(db, 'users', uid));
 
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-            return parsed as Record<string, AccountRole>;
-        }
-    } catch {
-        // Ignore malformed local storage data and fall back to empty map.
-    }
-
-    return {};
-}
-
-function persistRoleMap(roleMap: Record<string, AccountRole>) {
-    if (typeof window === 'undefined') {
-        return;
-    }
-
-    window.localStorage.setItem(ACCOUNT_ROLE_STORAGE_KEY, JSON.stringify(roleMap));
-}
-
-function readStoredOrganizerNamesMap(): Record<string, string[]> {
-    if (typeof window === 'undefined') {
-        return {};
-    }
-
-    try {
-        const raw = window.localStorage.getItem(ORGANIZER_NAMES_STORAGE_KEY);
-        if (!raw) {
-            return {};
-        }
-
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-            return parsed as Record<string, string[]>;
+        if (profileDoc.exists()) {
+            const data = profileDoc.data() as Record<string, unknown>;
+            const firestoreProfile = buildProfilePayload(data.orgenizer === true ? 'organizer' : data.role, data.organizerNames);
+            saveAccountProfileInMemory(uid, firestoreProfile);
+            return firestoreProfile;
         }
     } catch {
-        // Ignore malformed local storage data and fall back to empty map.
+        // If Firestore read fails, keep using memory fallback.
     }
 
-    return {};
-}
-
-function persistOrganizerNamesMap(nameMap: Record<string, string[]>) {
-    if (typeof window === 'undefined') {
-        return;
-    }
-
-    window.localStorage.setItem(ORGANIZER_NAMES_STORAGE_KEY, JSON.stringify(nameMap));
-}
-
-function saveOrganizerNames(uid: string, organizerNames: string[]) {
-    const current = readStoredOrganizerNamesMap();
-    current[uid] = organizerNames;
-    persistOrganizerNamesMap(current);
-}
-
-function saveAccountRole(uid: string, role: AccountRole) {
-    const current = readStoredRoleMap();
-    current[uid] = role;
-    persistRoleMap(current);
+    return fallbackProfile;
 }
 
 export function getStoredAccountRole(uid: string | null | undefined): AccountRole {
@@ -94,8 +86,7 @@ export function getStoredAccountRole(uid: string | null | undefined): AccountRol
         return 'user';
     }
 
-    const role = readStoredRoleMap()[uid];
-    return role === 'organizer' ? 'organizer' : 'user';
+    return accountProfileCache.get(uid)?.role ?? 'user';
 }
 
 export function getStoredOrganizerNames(uid: string | null | undefined): string[] {
@@ -103,14 +94,7 @@ export function getStoredOrganizerNames(uid: string | null | undefined): string[
         return [];
     }
 
-    const organizerNames = readStoredOrganizerNamesMap()[uid];
-    if (!Array.isArray(organizerNames)) {
-        return [];
-    }
-
-    return organizerNames
-        .map((name) => name?.trim())
-        .filter((name): name is string => !!name);
+    return accountProfileCache.get(uid)?.organizerNames ?? [];
 }
 
 export async function loginWithEmail(email: string, password: string) {
@@ -123,19 +107,26 @@ export async function signupWithEmail({ username, email, password, role = 'user'
     const auth = getAuthInstance();
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     const trimmedUsername = username.trim();
+    const profile = buildProfilePayload(role, organizerNames);
 
     if (trimmedUsername) {
         await updateProfile(credential.user, { displayName: trimmedUsername });
     }
 
     if (credential.user?.uid) {
-        saveAccountRole(credential.user.uid, role);
+        const { doc, serverTimestamp, setDoc } = await import('firebase/firestore');
+        const userDoc: Omit<UserDto, 'createdAt'> & { createdAt: Timestamp | FieldValue } = {
+            uid: credential.user.uid,
+            name: trimmedUsername || credential.user.displayName || '',
+            email: credential.user.email || email,
+            orgenizer: profile.role === 'organizer',
+            createdAt: serverTimestamp(),
+            likedItemIds: [],
+            organizerNames: profile.organizerNames,
+        };
 
-        if (role === 'organizer') {
-            saveOrganizerNames(credential.user.uid, organizerNames);
-        } else {
-            saveOrganizerNames(credential.user.uid, []);
-        }
+        await setDoc(doc(db, 'users', credential.user.uid), userDoc, { merge: true });
+        saveAccountProfileInMemory(credential.user.uid, profile);
     }
 
     return credential.user;

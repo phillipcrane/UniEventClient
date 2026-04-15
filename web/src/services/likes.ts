@@ -1,36 +1,10 @@
-const LIKED_EVENT_IDS_STORAGE_KEY = 'unievent.likedEventIds';
+import { db } from './firebase';
+
 export const LIKES_CHANGED_EVENT = 'unievent:likes-changed';
+const likesCache = new Map<string, Set<string>>();
 
-type LikedEventsMap = Record<string, string[]>;
-
-function readLikedEventsMap(): LikedEventsMap {
-    if (typeof window === 'undefined') {
-        return {};
-    }
-
-    try {
-        const raw = window.localStorage.getItem(LIKED_EVENT_IDS_STORAGE_KEY);
-        if (!raw) {
-            return {};
-        }
-
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-            return parsed as LikedEventsMap;
-        }
-    } catch {
-        // Ignore malformed local storage data and fall back to an empty map.
-    }
-
-    return {};
-}
-
-function persistLikedEventsMap(likedEventsMap: LikedEventsMap) {
-    if (typeof window === 'undefined') {
-        return;
-    }
-
-    window.localStorage.setItem(LIKED_EVENT_IDS_STORAGE_KEY, JSON.stringify(likedEventsMap));
+function isFirestoreEnabled(): boolean {
+    return import.meta.env.VITE_USE_FIRESTORE?.toLowerCase() === 'true';
 }
 
 function emitLikesChanged() {
@@ -41,36 +15,92 @@ function emitLikesChanged() {
     window.dispatchEvent(new Event(LIKES_CHANGED_EVENT));
 }
 
-export function getLikedEventIds(uid: string | null | undefined): string[] {
+function normalizeStringArray(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return value
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter((item): item is string => !!item);
+}
+
+function getCachedLikes(uid: string): string[] {
+    return Array.from(likesCache.get(uid) ?? new Set<string>());
+}
+
+function setCachedLikes(uid: string, nextLikes: Iterable<string>) {
+    likesCache.set(uid, new Set(nextLikes));
+}
+
+export async function getLikedEventIdsAsync(uid: string | null | undefined): Promise<string[]> {
     if (!uid) {
         return [];
     }
 
-    const likedEventIds = readLikedEventsMap()[uid];
-    if (!Array.isArray(likedEventIds)) {
-        return [];
+    if (!isFirestoreEnabled()) {
+        return getCachedLikes(uid);
     }
 
-    return likedEventIds.filter((eventId): eventId is string => typeof eventId === 'string' && !!eventId.trim());
+    try {
+        const { doc, getDoc } = await import('firebase/firestore');
+        const userDoc = await getDoc(doc(db, 'users', uid));
+        if (!userDoc.exists()) {
+            return getCachedLikes(uid);
+        }
+
+        const data = userDoc.data() as Record<string, unknown>;
+        const likedIds = normalizeStringArray(data.likedItemIds);
+        setCachedLikes(uid, likedIds);
+        return likedIds;
+    } catch {
+        return getCachedLikes(uid);
+    }
 }
 
-export function isEventLiked(uid: string | null | undefined, eventId: string): boolean {
-    return getLikedEventIds(uid).includes(eventId);
+export async function isEventLiked(uid: string | null | undefined, eventId: string): Promise<boolean> {
+    const likedEventIds = await getLikedEventIdsAsync(uid);
+    return likedEventIds.includes(eventId);
 }
 
-export function toggleLikedEvent(uid: string, eventId: string): boolean {
-    const current = readLikedEventsMap();
-    const nextLikedEventIds = new Set(current[uid] ?? []);
+export async function toggleLikedEvent(uid: string, eventId: string): Promise<boolean> {
+    const applyToggle = (currentLikedIds: string[]) => {
+        const nextLikedEventIds = new Set(currentLikedIds);
+        if (nextLikedEventIds.has(eventId)) {
+            nextLikedEventIds.delete(eventId);
+        } else {
+            nextLikedEventIds.add(eventId);
+        }
 
-    if (nextLikedEventIds.has(eventId)) {
-        nextLikedEventIds.delete(eventId);
-    } else {
-        nextLikedEventIds.add(eventId);
+        setCachedLikes(uid, nextLikedEventIds);
+        emitLikesChanged();
+        return nextLikedEventIds.has(eventId);
+    };
+
+    if (!isFirestoreEnabled()) {
+        return applyToggle(getCachedLikes(uid));
     }
 
-    current[uid] = Array.from(nextLikedEventIds);
-    persistLikedEventsMap(current);
-    emitLikesChanged();
+    try {
+        const { doc, getDoc, serverTimestamp, setDoc } = await import('firebase/firestore');
+        const userRef = doc(db, 'users', uid);
+        const userSnap = await getDoc(userRef);
+        const existingData = userSnap.exists() ? (userSnap.data() as Record<string, unknown>) : {};
 
-    return nextLikedEventIds.has(eventId);
+        const nextLiked = applyToggle(normalizeStringArray(existingData.likedItemIds));
+
+        await setDoc(
+            userRef,
+            {
+                likedItemIds: getCachedLikes(uid),
+                updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+        );
+
+        return nextLiked;
+    } catch (error) {
+        console.warn('Falling back to in-memory likes after Firestore failure.', error);
+        return applyToggle(getCachedLikes(uid));
+    }
 }

@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Footer } from '../components/Footer';
-import { getStoredAccountRole, getStoredOrganizerNames, onAuthUserChanged, signOutCurrentUser, type AuthUser } from '../services/auth';
+import { getAccountProfile, onAuthUserChanged, signOutCurrentUser, type AccountRole, type AuthUser } from '../services/auth';
 import { buildFacebookLoginUrl } from '../services/facebook';
 import { getEvents } from '../services/dal';
-import { getLikedEventIds, LIKES_CHANGED_EVENT } from '../services/likes';
+import { getLikedEventIdsAsync, LIKES_CHANGED_EVENT } from '../services/likes';
 import { formatEventStart } from '../utils/eventUtils';
 import type { Event as EventType } from '../types';
 import { LikeButton } from '../components/LikeButton';
@@ -34,6 +34,8 @@ function filterAndSortLikedEvents(events: EventType[], likedEventIds: string[]) 
 export function ProfilePage() {
     const navigate = useNavigate();
     const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+    const [accountRole, setAccountRole] = useState<AccountRole>('user');
+    const [organizerNames, setOrganizerNames] = useState<string[]>([]);
     const [isSigningOut, setIsSigningOut] = useState(false);
     const [allEvents, setAllEvents] = useState<EventType[]>([]);
     const [likedEvents, setLikedEvents] = useState<EventType[]>([]);
@@ -63,8 +65,26 @@ export function ProfilePage() {
     const userLabel = currentUser?.displayName || currentUser?.email || 'Profile';
     const username = buildUsername(currentUser);
     const profileImage = currentUser?.photoURL;
-    const accountRole = getStoredAccountRole(currentUser?.uid);
-    const organizerNames = getStoredOrganizerNames(currentUser?.uid);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadAccountProfile = async () => {
+            const profile = await getAccountProfile(currentUser?.uid);
+            if (cancelled) {
+                return;
+            }
+
+            setAccountRole(profile.role);
+            setOrganizerNames(profile.organizerNames);
+        };
+
+        void loadAccountProfile();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [currentUser?.uid]);
 
     useEffect(() => {
         let cancelled = false;
@@ -81,13 +101,14 @@ export function ProfilePage() {
 
             try {
                 const events = await getEvents();
+                const likedEventIds = await getLikedEventIdsAsync(currentUser.uid);
 
                 if (cancelled) {
                     return;
                 }
 
                 setAllEvents(events);
-                setLikedEvents(filterAndSortLikedEvents(events, getLikedEventIds(currentUser.uid)));
+                setLikedEvents(filterAndSortLikedEvents(events, likedEventIds));
             } finally {
                 if (!cancelled) {
                     setIsLoadingLikedEvents(false);
@@ -107,15 +128,19 @@ export function ProfilePage() {
             return;
         }
 
-        const syncLikedEvents = () => {
-            setLikedEvents(filterAndSortLikedEvents(allEvents, getLikedEventIds(currentUser.uid)));
+        const syncLikedEvents = async () => {
+            const likedEventIds = await getLikedEventIdsAsync(currentUser.uid);
+            setLikedEvents(filterAndSortLikedEvents(allEvents, likedEventIds));
         };
 
-        syncLikedEvents();
-        window.addEventListener(LIKES_CHANGED_EVENT, syncLikedEvents);
+        void syncLikedEvents();
+        const handleLikesChanged = () => {
+            void syncLikedEvents();
+        };
+        window.addEventListener(LIKES_CHANGED_EVENT, handleLikesChanged);
 
         return () => {
-            window.removeEventListener(LIKES_CHANGED_EVENT, syncLikedEvents);
+            window.removeEventListener(LIKES_CHANGED_EVENT, handleLikesChanged);
         };
     }, [allEvents, currentUser?.uid]);
 
