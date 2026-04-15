@@ -201,6 +201,7 @@ html.dark {
 
 .header-text {
   flex: 1;
+  min-width: 0;
 }
 
 .header-title {
@@ -210,6 +211,7 @@ html.dark {
   color: var(--header-text);
   margin: 0;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .header-subtitle {
@@ -220,33 +222,92 @@ html.dark {
   letter-spacing: 0.01em;
 }
 
-/* Responsive header */
-@media (max-width: 640px) {
+/* Keep clear space for the top-right controls on smaller desktop/tablet widths */
+@media (max-width: 1024px) {
   .page-header {
-    padding: 16px 12px;
-    /* slightly smaller on mobile */
-    padding-right: 12px;
-    /* don't reserve large right padding on small screens */
-  }
-
-  .header-content {
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .header-logo {
-    width: 3rem;
-    height: 3rem;
+    padding-right: 172px;
   }
 
   .header-title {
-    font-size: 1.875rem;
+    font-size: clamp(2rem, 5vw, 2.45rem);
+  }
+}
+
+/* Responsive header */
+@media (max-width: 640px) {
+  .page-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.75rem;
+    padding: 16px 14px;
+    border-radius: 20px;
+    border-top-right-radius: 20px;
+  }
+
+  .header-toggle {
+    position: static;
+    top: auto;
+    right: auto;
+    z-index: 30;
+    justify-self: end;
+    align-self: start;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 0.45rem;
+  }
+
+  .header-content {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.85rem;
+    justify-content: start;
+    width: 100%;
+    max-width: none;
+  }
+
+  .header-logo {
+    width: 3.45rem;
+    height: 3.45rem;
+    margin-top: 7px;
+  }
+
+  .header-title {
+    font-size: clamp(1.35rem, 6.2vw, 1.75rem);
+    line-height: 1.12;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    display: block;
   }
 
   .header-text {
-    text-align: center;
-    flex: 1 100%;
+    text-align: left;
+    flex: initial;
+    min-width: 0;
+    padding-right: 0.25rem;
+  }
+
+  .header-subtitle {
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    line-height: 1.28;
+    display: block;
+    overflow: visible;
+  }
+
+  .header-toggle .profile-header-logout-btn {
+    width: 42px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .header-toggle .profile-header-logout-label {
+    display: none;
   }
 }
 
@@ -309,6 +370,39 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 html.dark input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1) brightness(0.9);
   cursor: pointer;
+}
+
+/* Phone consistency: always keep date range in one row on phones */
+@media (max-width: 640px) {
+  .date-range-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 0.35rem;
+  }
+
+  .date-range-input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .date-range-separator {
+    padding-left: 0;
+    padding-right: 0;
+    font-size: 0.9rem;
+  }
+}
+
+/* Ultra-small phones: compact spacing/text while keeping the same horizontal layout */
+@media (max-width: 390px) {
+  .date-range-input {
+    padding: 0.5rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .date-range-separator {
+    font-size: 0.8rem;
+  }
 }
 
 /* ===== BUTTONS ===== */

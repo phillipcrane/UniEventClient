@@ -38,20 +38,20 @@ function SearchBox({ query, setQuery, count }: { query: string; setQuery: (v: st
 // two simple date pickers (from / to) 
 function DateRangeFilter({ fromDate, setFromDate, toDate, setToDate }: { fromDate: string; setFromDate: (v: string) => void; toDate: string; setToDate: (v: string) => void }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2">
       <label className="text-xs font-semibold uppercase tracking-widest text-[var(--text-subtle)]">Date Range</label>
-      <div className="flex items-center gap-2">
+      <div className="date-range-row flex w-full min-w-0 items-center gap-1.5 sm:gap-2">
         <input
           type="date"
-          className="flex-1 px-4 py-2.5 rounded-lg border-2 input text-[var(--input-text)] bg-[var(--input-bg)] border-[var(--input-border)] focus:border-[var(--input-focus-border)] focus:outline-none focus:ring-3 focus:ring-[var(--button-hover)] transition-all duration-200"
+          className="date-range-input w-0 min-w-0 flex-1 rounded-lg border-2 input bg-[var(--input-bg)] border-[var(--input-border)] px-2.5 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-border)] focus:outline-none focus:ring-3 focus:ring-[var(--button-hover)] transition-all duration-200 sm:px-4 sm:py-2.5 sm:text-base"
           value={fromDate}
           onChange={e => setFromDate(e.target.value)}
           title="Start date"
         />
-        <span className="text-[var(--text-subtle)] font-medium px-2">→</span>
+        <span className="date-range-separator self-center px-0.5 text-[var(--text-subtle)] font-medium sm:px-2">→</span>
         <input
           type="date"
-          className="flex-1 px-4 py-2.5 rounded-lg border-2 input text-[var(--input-text)] bg-[var(--input-bg)] border-[var(--input-border)] focus:border-[var(--input-focus-border)] focus:outline-none focus:ring-3 focus:ring-[var(--button-hover)] transition-all duration-200"
+          className="date-range-input w-0 min-w-0 flex-1 rounded-lg border-2 input bg-[var(--input-bg)] border-[var(--input-border)] px-2.5 py-2 text-sm text-[var(--input-text)] focus:border-[var(--input-focus-border)] focus:outline-none focus:ring-3 focus:ring-[var(--button-hover)] transition-all duration-200 sm:px-4 sm:py-2.5 sm:text-base"
           value={toDate}
           onChange={e => setToDate(e.target.value)}
           title="End date"

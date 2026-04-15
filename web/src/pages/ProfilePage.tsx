@@ -70,10 +70,13 @@ export function ProfilePage() {
                         type="button"
                         onClick={handleSignOut}
                         disabled={isSigningOut}
-                        className="inline-flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-4 sm:text-sm"
+                        aria-label="Log out"
+                        className="profile-header-logout-btn inline-flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-4 sm:text-sm"
                     >
                         <LogOut size={18} />
-                        {isSigningOut ? 'Signing out...' : 'Log out'}
+                        <span className="profile-header-logout-label">
+                            {isSigningOut ? 'Signing out...' : 'Log out'}
+                        </span>
                     </button>
                     <ThemeToggle />
                 </div>
