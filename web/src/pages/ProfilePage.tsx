@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { HeaderLogoLink } from '../components/HeaderLogoLink';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Footer } from '../components/Footer';
 import { getAccountProfile, onAuthUserChanged, signOutCurrentUser, type AccountRole, type AuthUser } from '../services/auth';
@@ -128,9 +129,13 @@ export function ProfilePage() {
             return;
         }
 
+        let cancelled = false;
+
         const syncLikedEvents = async () => {
             const likedEventIds = await getLikedEventIdsAsync(currentUser.uid);
-            setLikedEvents(filterAndSortLikedEvents(allEvents, likedEventIds));
+            if (!cancelled) {
+                setLikedEvents(filterAndSortLikedEvents(allEvents, likedEventIds));
+            }
         };
 
         void syncLikedEvents();
@@ -140,6 +145,7 @@ export function ProfilePage() {
         window.addEventListener(LIKES_CHANGED_EVENT, handleLikesChanged);
 
         return () => {
+            cancelled = true;
             window.removeEventListener(LIKES_CHANGED_EVENT, handleLikesChanged);
         };
     }, [allEvents, currentUser?.uid]);
@@ -148,12 +154,8 @@ export function ProfilePage() {
         <div className="min-h-screen flex flex-col">
             <header className="page-header mx-6 md:mx-8 mt-4 md:mt-6 mb-8">
                 <div className="header-content">
-                    <img
-                        src="https://firebasestorage.googleapis.com/v0/b/dtuevent-8105b.firebasestorage.app/o/picture%2Fdtulogo.png?alt=media&token=7e86de6e-f1f4-471d-8354-70ad70bafe14"
-                        alt="DTU Logo"
-                        className="header-logo"
-                    />
-                    <div className="header-text">
+                    <HeaderLogoLink />
+                    <div className="header-text profile-header-text">
                         <h1 className="header-title">Profile</h1>
                         <p className="header-subtitle">View your account details</p>
                     </div>
@@ -165,10 +167,13 @@ export function ProfilePage() {
                             type="button"
                             onClick={handleSignOut}
                             disabled={isSigningOut}
-                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-4 sm:text-sm"
+                            aria-label="Log out"
+                            className="profile-header-logout-btn inline-flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-4 sm:text-sm"
                         >
                             <LogOut size={18} />
-                            {isSigningOut ? 'Signing out...' : 'Log out'}
+                            <span className="profile-header-logout-label">
+                                {isSigningOut ? 'Signing out...' : 'Log out'}
+                            </span>
                         </button>
                         <ThemeToggle />
                     </div>

@@ -4,6 +4,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { EventList } from '../components/EventList';
 import { CalendarView } from '../components/Calendar';
 import { Footer } from '../components/Footer';
+import { HeaderLogoLink } from '../components/HeaderLogoLink';
 import { getEvents, getPages } from '../services/dal';
 import { mapAuthError, onAuthUserChanged, signOutCurrentUser } from '../services/auth';
 import { parseDateOnly, startOfDayMs, endOfDayMs } from '../utils/dateUtils';
@@ -169,11 +170,7 @@ export function MainPage() {
     <div className="min-h-screen flex flex-col">
       <header className="page-header mx-6 md:mx-8 mt-4 md:mt-6 mb-6">
         <div className="header-content">
-          <img
-            src="https://firebasestorage.googleapis.com/v0/b/dtuevent-8105b.firebasestorage.app/o/picture%2Fdtulogo.png?alt=media&token=7e86de6e-f1f4-471d-8354-70ad70bafe14"
-            alt="DTU Logo"
-            className="header-logo"
-          />
+          <HeaderLogoLink />
           <div className="header-text">
             <h1 className="header-title">DTU Events</h1>
             <p className="header-subtitle">Discover Technical University of Denmark Events</p>
@@ -276,8 +273,8 @@ export function MainPage() {
                 type="button"
                 onClick={() => setViewMode('list')}
                 className={`px-4 py-2 rounded-lg border text-sm font-semibold transition ${viewMode === 'list'
-                    ? 'bg-[var(--link-primary)] text-white border-transparent'
-                    : 'bg-[var(--panel-bg)] text-[var(--text-primary)] border-[var(--panel-border)] hover:bg-[var(--input-bg)]'
+                  ? 'bg-[var(--link-primary)] text-white border-transparent'
+                  : 'bg-[var(--panel-bg)] text-[var(--text-primary)] border-[var(--panel-border)] hover:bg-[var(--input-bg)]'
                   }`}
               >
                 List
@@ -287,8 +284,8 @@ export function MainPage() {
                 type="button"
                 onClick={() => setViewMode('calendar')}
                 className={`px-4 py-2 rounded-lg border text-sm font-semibold transition ${viewMode === 'calendar'
-                    ? 'bg-[var(--link-primary)] text-white border-transparent'
-                    : 'bg-[var(--panel-bg)] text-[var(--text-primary)] border-[var(--panel-border)] hover:bg-[var(--input-bg)]'
+                  ? 'bg-[var(--link-primary)] text-white border-transparent'
+                  : 'bg-[var(--panel-bg)] text-[var(--text-primary)] border-[var(--panel-border)] hover:bg-[var(--input-bg)]'
                   }`}
               >
                 Calendar
