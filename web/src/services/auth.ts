@@ -11,7 +11,9 @@ export type UserDto = {
     uid: string;
     name: string;
     email: string;
-    orgenizer: boolean;
+    organizer: boolean;
+    /** @deprecated Legacy misspelled field kept temporarily for backward compatibility with older Firestore documents. */
+    orgenizer?: boolean;
     createdAt: Timestamp | null;
     likedItemIds: string[];
     organizerNames?: string[];
