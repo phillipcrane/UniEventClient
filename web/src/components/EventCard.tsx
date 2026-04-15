@@ -53,11 +53,18 @@ export function EventCard({ event }: { event: Event }) {
       }}
     >
       {/* card */}
-      <div className="relative bubble flex flex-col overflow-hidden">
+      <div className="relative bubble flex flex-col overflow-visible">
+        <LikeButton
+          event={event}
+          compact
+          iconOnly
+          className="absolute right-4 top-4 z-20"
+        />
+
         {/* NEW badge */}
         {isNew && (
           <div className="mb-3">
-            <span className="rounded-full bg-gradient-to-r from-[var(--dtu-accent)] to-[var(--dtu-accent-light)] text-white text-xs font-bold px-3 py-1.5 shadow-lg right-4 top-4 absolute">
+            <span className="rounded-full bg-gradient-to-r from-[var(--dtu-accent)] to-[var(--dtu-accent-light)] text-white text-xs font-bold px-3 py-1.5 shadow-lg left-4 top-4 absolute z-10">
               New event
             </span>
           </div>
@@ -95,10 +102,7 @@ export function EventCard({ event }: { event: Event }) {
 
         {/* bottom section: link button and chevron */}
         <div className="flex items-center justify-between mt-4 gap-2 px-4 pb-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <LikeButton event={event} compact />
-            <FacebookLinkButton event={event} />
-          </div>
+          <FacebookLinkButton event={event} />
           
           {/* chevron button in bottom right - only show if description can be expanded */}
           {/* chevron means an arrow minus the stick so just the arrowhead */}
