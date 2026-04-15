@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { HeaderLogoLink } from '../components/HeaderLogoLink';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Footer } from '../components/Footer';
 import { getStoredAccountRole, getStoredOrganizerNames, onAuthUserChanged, signOutCurrentUser, type AuthUser } from '../services/auth';
@@ -54,11 +55,7 @@ export function ProfilePage() {
         <div className="min-h-screen flex flex-col">
             <header className="page-header mx-6 md:mx-8 mt-4 md:mt-6 mb-8">
                 <div className="header-content">
-                    <img
-                        src="https://firebasestorage.googleapis.com/v0/b/dtuevent-8105b.firebasestorage.app/o/picture%2Fdtulogo.png?alt=media&token=7e86de6e-f1f4-471d-8354-70ad70bafe14"
-                        alt="DTU Logo"
-                        className="header-logo"
-                    />
+                    <HeaderLogoLink />
                     <div className="header-text profile-header-text">
                         <h1 className="header-title">Profile</h1>
                         <p className="header-subtitle">View your account details</p>

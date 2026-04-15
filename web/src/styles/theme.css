@@ -175,6 +175,17 @@ html.dark {
   transition: transform 220ms ease;
 }
 
+.header-logo-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  border-radius: 0.5rem;
+}
+
+.header-logo-link:focus-visible {
+  outline: 2px solid var(--dtu-accent);
+  outline-offset: 4px;
+}
+
 .header-logo:hover {
   transform: scale(1.05);
 }
