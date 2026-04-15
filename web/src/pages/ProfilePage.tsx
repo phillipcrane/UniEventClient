@@ -23,10 +23,19 @@ function buildUsername(user: AuthUser | null) {
     return 'username';
 }
 
+function filterAndSortLikedEvents(events: EventType[], likedEventIds: string[]) {
+    const likedEventIdSet = new Set(likedEventIds);
+
+    return events
+        .filter((event) => likedEventIdSet.has(event.id))
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+}
+
 export function ProfilePage() {
     const navigate = useNavigate();
     const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
     const [isSigningOut, setIsSigningOut] = useState(false);
+    const [allEvents, setAllEvents] = useState<EventType[]>([]);
     const [likedEvents, setLikedEvents] = useState<EventType[]>([]);
     const [isLoadingLikedEvents, setIsLoadingLikedEvents] = useState(true);
 
@@ -60,8 +69,9 @@ export function ProfilePage() {
     useEffect(() => {
         let cancelled = false;
 
-        const loadLikedEvents = async () => {
+        const loadEvents = async () => {
             if (!currentUser?.uid) {
+                setAllEvents([]);
                 setLikedEvents([]);
                 setIsLoadingLikedEvents(false);
                 return;
@@ -70,21 +80,14 @@ export function ProfilePage() {
             setIsLoadingLikedEvents(true);
 
             try {
-                const [events, likedEventIds] = await Promise.all([
-                    getEvents(),
-                    Promise.resolve(getLikedEventIds(currentUser.uid)),
-                ]);
+                const events = await getEvents();
 
                 if (cancelled) {
                     return;
                 }
 
-                const likedEventIdSet = new Set(likedEventIds);
-                setLikedEvents(
-                    events
-                        .filter((event) => likedEventIdSet.has(event.id))
-                        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-                );
+                setAllEvents(events);
+                setLikedEvents(filterAndSortLikedEvents(events, getLikedEventIds(currentUser.uid)));
             } finally {
                 if (!cancelled) {
                     setIsLoadingLikedEvents(false);
@@ -92,18 +95,29 @@ export function ProfilePage() {
             }
         };
 
-        const handleLikesChanged = () => {
-            void loadLikedEvents();
-        };
-
-        void loadLikedEvents();
-        window.addEventListener(LIKES_CHANGED_EVENT, handleLikesChanged);
+        void loadEvents();
 
         return () => {
             cancelled = true;
-            window.removeEventListener(LIKES_CHANGED_EVENT, handleLikesChanged);
         };
     }, [currentUser?.uid]);
+
+    useEffect(() => {
+        if (!currentUser?.uid) {
+            return;
+        }
+
+        const syncLikedEvents = () => {
+            setLikedEvents(filterAndSortLikedEvents(allEvents, getLikedEventIds(currentUser.uid)));
+        };
+
+        syncLikedEvents();
+        window.addEventListener(LIKES_CHANGED_EVENT, syncLikedEvents);
+
+        return () => {
+            window.removeEventListener(LIKES_CHANGED_EVENT, syncLikedEvents);
+        };
+    }, [allEvents, currentUser?.uid]);
 
     return (
         <div className="min-h-screen flex flex-col">
