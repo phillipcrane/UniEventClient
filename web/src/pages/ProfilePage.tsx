@@ -134,17 +134,25 @@ export function ProfilePage() {
                     </div>
                 </div>
 
-                <div className="header-toggle flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={handleSignOut}
-                        disabled={isSigningOut}
-                        className="inline-flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-4 sm:text-sm"
+                <div className="header-toggle flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleSignOut}
+                            disabled={isSigningOut}
+                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-4 sm:text-sm"
+                        >
+                            <LogOut size={18} />
+                            {isSigningOut ? 'Signing out...' : 'Log out'}
+                        </button>
+                        <ThemeToggle />
+                    </div>
+                    <Link
+                        to="/"
+                        className="inline-flex items-center justify-center rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-4 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] sm:px-5 sm:text-sm"
                     >
-                        <LogOut size={18} />
-                        {isSigningOut ? 'Signing out...' : 'Log out'}
-                    </button>
-                    <ThemeToggle />
+                        Back to Events
+                    </Link>
                 </div>
             </header>
 
@@ -225,17 +233,10 @@ export function ProfilePage() {
                         </div>
                     </div>
 
-                    {/* Back to Events Button */}
-                    <Link
-                        to="/"
-                        className="inline-flex items-center justify-center rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-6 py-3 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)]"
-                    >
-                        Back to Events
-                    </Link>
                 </div>
 
                 {accountRole === 'organizer' && (
-                    <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-6 shadow-lg">
+                    <section className="mt-6 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-6 shadow-lg">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
@@ -256,17 +257,17 @@ export function ProfilePage() {
                     </section>
                 )}
 
-                <section className="mx-auto mt-8 max-w-5xl rounded-3xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-6 md:p-8 shadow-xl">
+                <section className="mt-8 w-full rounded-3xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-6 md:p-8 shadow-xl">
                     <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                         <div>
                             <p className="text-xs font-semibold tracking-[0.25em] text-[var(--text-subtle)] uppercase">
                                 Liked Events
                             </p>
                             <h3 className="mt-2 text-2xl font-bold text-[var(--text-primary)] md:text-3xl">
-                                Saved for later
+                                Your liked events
                             </h3>
                             <p className="mt-2 max-w-2xl text-sm text-[var(--text-subtle)]">
-                                This area is ready for liked events. We will connect real data here later.
+                                Events you like are saved here so you can quickly find them again.
                             </p>
                         </div>
 
