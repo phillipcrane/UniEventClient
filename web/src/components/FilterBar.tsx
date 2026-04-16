@@ -104,7 +104,7 @@ function DateRangeFilter({ fromDate, setFromDate, toDate, setToDate }: { fromDat
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <label className="text-xs font-semibold uppercase tracking-widest text-[var(--text-subtle)]">Date Range</label>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="date-preset-row flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => applyPreset('7d')}

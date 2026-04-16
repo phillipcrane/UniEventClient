@@ -231,9 +231,9 @@ export function EventPage() {
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-subtle)]">Event</p>
                     <h2 className="mt-2 text-2xl font-bold text-[var(--text-primary)] md:text-3xl">{event.title}</h2>
-                    <div className="event-meta-row mt-2 flex flex-wrap gap-2 text-sm text-[var(--text-subtle)]">
+                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-[var(--text-subtle)]">
                       <span>{formatEventStart(event.startTime)}</span>
-                      <span className="event-meta-divider" aria-hidden="true">•</span>
+                      <span aria-hidden="true">•</span>
                       <span>Organizer: {organizerName}</span>
                     </div>
                   </div>
