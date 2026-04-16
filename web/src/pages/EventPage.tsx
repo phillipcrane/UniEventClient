@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import type { Event, Page } from '../types';
 import { getEventById, getPages } from '../services/dal';
@@ -8,7 +8,8 @@ import { LikeButton } from '../components/LikeButton';
 import { HeaderLogoLink } from '../components/HeaderLogoLink';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { ShareButton } from '../components/ShareButton';
-import { ArrowLeft, CalendarDays, Clock3, MapPin } from 'lucide-react';
+import { mapAuthError, onAuthUserChanged, signOutCurrentUser, type AuthUser } from '../services/auth';
+import { CalendarDays, CircleUserRound, Clock3, LogOut, MapPin } from 'lucide-react';
 
 function formatTimeRange(startTime: string, endTime?: string) {
   const formatter = new Intl.DateTimeFormat('da-DK', { hour: '2-digit', minute: '2-digit' });
@@ -42,10 +43,12 @@ function getOrganizerName(event: Event | null, pages: Page[]) {
 
 export function EventPage() {
   const { id } = useParams<{ id: string }>(); // id for /events/:id
-  const navigate = useNavigate(); // surprise tool that will help us later
   const [event, setEvent] = useState<Event | null>(null); // make events stateful
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   // () => means "when this happens, do this". Lambda function / arrow function syntax.
   useEffect(() => {
@@ -68,9 +71,21 @@ export function EventPage() {
     getEventFromDal(); // async
   }, [id]);
 
+  useEffect(() => {
+    const unsubscribe = onAuthUserChanged((user) => {
+      setCurrentUser(user);
+      if (!user) {
+        setIsProfileOpen(false);
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<string>('');
   const addMenuRef = useRef<HTMLDivElement | null>(null);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   // close the menu when clicking outside
   useEffect(() => {
@@ -86,9 +101,35 @@ export function EventPage() {
     return () => document.removeEventListener('mousedown', onClick);
   }, [showAddMenu]);
 
-  const handleBack = () => { // when back button clicked...
-    navigate('/'); // ...go back to main events list
-  };
+  useEffect(() => {
+    if (!isProfileOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileOpen]);
+
+  async function handleSignOut() {
+    try {
+      setIsSigningOut(true);
+      await signOutCurrentUser();
+      setIsProfileOpen(false);
+    } catch (error) {
+      // Keep the event page stable if sign-out fails.
+      console.error(mapAuthError(error));
+    } finally {
+      setIsSigningOut(false);
+    }
+  }
+
+  const userLabel = currentUser?.displayName || currentUser?.email || 'My Profile';
 
   const handleLikeToggle = (isSaved: boolean) => {
     setSaveFeedback(isSaved ? 'Saved to your profile.' : 'Removed from saved events.');
@@ -107,24 +148,63 @@ export function EventPage() {
           <div className="header-text">
             <h1 className="header-title">Event details</h1>
             <p className="header-subtitle">
-              {event ? 'Explore details, save the event, and share it.' : 'Loading event details...'}
+              {event ? 'Discover event details.' : 'Loading event details...'}
             </p>
           </div>
         </div>
 
-        <div className="header-toggle relative flex items-center gap-2">
-          <button
-            onClick={() => handleBack()}
-            aria-label="Back to events"
-            className="rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--input-focus-border)] sm:px-4 sm:text-sm"
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <ArrowLeft size={14} />
-              Back to events
-            </span>
-          </button>
-
+        <div className="header-toggle relative flex items-center gap-2 rounded-xl border border-[var(--panel-border)] bg-[var(--panel-bg)] px-2 py-1.5 shadow-sm">
           <ThemeToggle />
+
+          {currentUser ? (
+            <div className="relative" ref={profileMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsProfileOpen((open) => !open)}
+                className="inline-flex items-center justify-center rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--input-focus-border)]"
+                aria-label="Open account menu"
+                aria-expanded={isProfileOpen}
+              >
+                <CircleUserRound size={18} />
+              </button>
+
+              {isProfileOpen && (
+                <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-2 shadow-xl">
+                  <p className="px-2 py-2 text-xs font-semibold text-[var(--text-subtle)]">
+                    Signed in as
+                  </p>
+                  <p className="truncate px-2 pb-2 text-sm font-semibold text-[var(--text-primary)]">
+                    {userLabel}
+                  </p>
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsProfileOpen(false)}
+                    className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)]"
+                  >
+                    <CircleUserRound size={16} />
+                    Profile
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={isSigningOut}
+                    className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <LogOut size={16} />
+                    {isSigningOut ? 'Signing out...' : 'Log out'}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--input-focus-border)]"
+              aria-label="Go to login"
+            >
+              <CircleUserRound size={18} />
+            </Link>
+          )}
         </div>
       </header>
 
@@ -214,17 +294,17 @@ export function EventPage() {
 
               <section className="mb-6 overflow-hidden rounded-2xl border border-[var(--panel-border)] shadow-lg">
                 <div className="relative w-full h-[46vh] min-h-[260px]">
-                <img
-                  src={event.coverImageUrl ?? ''}
-                  alt={event.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  <div className="inline-flex items-center rounded-full border border-white/20 bg-black/30 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
-                    Event details
+                  <img
+                    src={event.coverImageUrl ?? ''}
+                    alt={event.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                    <div className="inline-flex items-center rounded-full border border-white/20 bg-black/30 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                      Event details
+                    </div>
                   </div>
-                </div>
                 </div>
               </section>
 

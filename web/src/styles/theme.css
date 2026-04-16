@@ -249,7 +249,7 @@ html.dark {
   .page-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
+    align-items: center;
     gap: 0.75rem;
     padding: 16px 14px;
     border-radius: 20px;
@@ -262,17 +262,18 @@ html.dark {
     right: auto;
     z-index: 30;
     justify-self: end;
-    align-self: start;
+    align-self: center;
     display: flex;
     flex-direction: column-reverse;
     align-items: flex-end;
     gap: 0.45rem;
+    margin-top: 0.2rem;
   }
 
   .header-content {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    align-items: start;
+    align-items: center;
     gap: 0.85rem;
     justify-content: start;
     width: 100%;
@@ -299,6 +300,7 @@ html.dark {
     flex: initial;
     min-width: 0;
     padding-right: 0.25rem;
+    padding-top: 0.2rem;
   }
 
   .header-subtitle {
