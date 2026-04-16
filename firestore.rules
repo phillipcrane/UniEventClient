@@ -32,6 +32,19 @@ service cloud.firestore {
             .hasOnly(['likedItemIds', 'updatedAt']);
     }
 
+    // Account profile data (role and organizer metadata)
+    match /userProfiles/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid;
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.organizerNames == resource.data.organizerNames;
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;

@@ -104,10 +104,13 @@ describe('auth service', () => {
         expect(mockUpdateProfile).toHaveBeenCalledWith(fakeUser, { displayName: 'Alice' });
         expect(getStoredAccountRole('user-2')).toBe('organizer');
         expect(getStoredOrganizerNames('user-2')).toEqual(['UniEvent Core Team', 'DTU Campus Events']);
-        expect(mockSetDoc).toHaveBeenCalled();
+        expect(mockDoc).toHaveBeenCalledWith({ name: 'fake-db' }, 'users', 'user-2');
+        expect(mockSetDoc).toHaveBeenCalledTimes(1);
         expect(mockSetDoc.mock.calls[0]?.[1]).toMatchObject({
             uid: 'user-2',
             organizer: true,
+            role: 'organizer',
+            organizerNames: ['UniEvent Core Team', 'DTU Campus Events'],
             likedItemIds: [],
         });
         expect(user).toBe(fakeUser);
@@ -205,7 +208,7 @@ describe('auth service', () => {
         vi.stubEnv('VITE_USE_FIRESTORE', 'true');
         mockGetDoc.mockResolvedValueOnce({
             exists: () => true,
-            data: () => ({ organizer: true, organizerNames: ['UniEvent Core Team'] }),
+            data: () => ({ role: 'organizer', organizerNames: ['UniEvent Core Team'] }),
         });
 
         const profile = await getAccountProfile('firestore-user');
@@ -216,6 +219,7 @@ describe('auth service', () => {
     });
 
     it('skips Firestore when VITE_USE_FIRESTORE is not true', async () => {
+        vi.stubEnv('VITE_USE_FIRESTORE', 'false');
         const profile = await getAccountProfile('some-user');
 
         expect(mockGetDoc).not.toHaveBeenCalled();

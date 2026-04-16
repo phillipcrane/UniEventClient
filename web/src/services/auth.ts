@@ -7,6 +7,8 @@ function isFirestoreEnabled(): boolean {
     return import.meta.env.VITE_USE_FIRESTORE?.toLowerCase() === 'true';
 }
 
+const USER_LIKES_COLLECTION = 'users';
+
 export type AuthUser = User;
 type AuthErrorContext = 'login' | 'signup' | 'general';
 export type AccountRole = 'user' | 'organizer';
@@ -18,6 +20,7 @@ export type UserDto = {
     organizer: boolean;
     /** @deprecated Legacy misspelled field kept temporarily for backward compatibility with older Firestore documents. */
     orgenizer?: boolean;
+    role?: AccountRole;
     createdAt: Timestamp | null;
     likedItemIds: string[];
     organizerNames?: string[];
@@ -76,11 +79,11 @@ export async function getAccountProfile(uid: string | null | undefined): Promise
 
     try {
         const { doc, getDoc } = await import('firebase/firestore');
-        const profileDoc = await getDoc(doc(db, 'users', uid));
+        const userDoc = await getDoc(doc(db, USER_LIKES_COLLECTION, uid));
 
-        if (profileDoc.exists()) {
-            const data = profileDoc.data() as Record<string, unknown>;
-            const role = data.organizer === true || data.orgenizer === true ? 'organizer' : data.role;
+        if (userDoc.exists()) {
+            const data = userDoc.data() as Record<string, unknown>;
+            const role = data.role ?? (data.organizer === true || data.orgenizer === true ? 'organizer' : 'user');
             const firestoreProfile = buildProfilePayload(role, data.organizerNames);
             saveAccountProfileInMemory(uid, firestoreProfile);
             return firestoreProfile;
@@ -134,12 +137,13 @@ export async function signupWithEmail({ username, email, password, role = 'user'
                 name: trimmedUsername || credential.user.displayName || '',
                 email: credential.user.email || email,
                 organizer: profile.role === 'organizer',
+                role: profile.role,
                 createdAt: serverTimestamp(),
                 likedItemIds: [],
                 organizerNames: profile.organizerNames,
             };
 
-            await setDoc(doc(db, 'users', credential.user.uid), userDoc, { merge: true });
+            await setDoc(doc(db, USER_LIKES_COLLECTION, credential.user.uid), userDoc, { merge: true });
         }
     }
 
