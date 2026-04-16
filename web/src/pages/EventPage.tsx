@@ -191,7 +191,7 @@ export function EventPage() {
                             }}
                             className="w-full text-left px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--input-bg)]"
                           >
-                            Apple / .ics
+                            Apple Calendar
                           </button>
                         </div>
                       )}
