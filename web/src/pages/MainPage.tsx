@@ -11,7 +11,7 @@ import { parseDateOnly, startOfDayMs, endOfDayMs } from '../utils/dateUtils';
 import type { Event as EventType, Page } from '../types';
 import type { AuthUser } from '../services/auth';
 import { Link } from 'react-router-dom';
-import { CircleUserRound, LogOut } from 'lucide-react';
+import { CalendarDays, CircleUserRound, LayoutList, LogOut } from 'lucide-react';
 
 export function MainPage() {
   const [pages, setPages] = useState([] as Page[]);
@@ -177,13 +177,15 @@ export function MainPage() {
           </div>
         </div>
 
-        <div className="header-toggle relative flex items-center gap-2">
+        <div className="header-toggle relative flex items-center gap-2 rounded-xl border border-[var(--panel-border)] bg-[var(--panel-bg)] px-2 py-1.5 shadow-sm">
+          <ThemeToggle />
+
           {currentUser ? (
             <div className="relative" ref={profileMenuRef}>
               <button
                 type="button"
                 onClick={() => setIsProfileOpen((open) => !open)}
-                className="inline-flex items-center justify-center rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)]"
+                className="inline-flex items-center justify-center rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--input-focus-border)]"
                 aria-label="Open account menu"
                 aria-expanded={isProfileOpen}
               >
@@ -227,8 +229,6 @@ export function MainPage() {
               Log In / Sign Up
             </Link>
           )}
-
-          <ThemeToggle />
         </div>
       </header>
 
@@ -263,32 +263,40 @@ export function MainPage() {
             </p>
           )}
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
-            <div className="text-sm text-[var(--text-subtle)]">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-[var(--panel-border)] bg-[var(--panel-bg)] px-4 py-3 gap-3">
+            <div className="text-sm font-medium text-[var(--text-subtle)]" aria-live="polite">
               {count} event{count === 1 ? '' : 's'} found
             </div>
 
-            <div className="flex gap-2">
+            <div className="inline-flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--input-bg)] p-1">
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
+                aria-pressed={viewMode === 'list'}
                 className={`px-4 py-2 rounded-lg border text-sm font-semibold transition ${viewMode === 'list'
                   ? 'bg-[var(--link-primary)] text-white border-transparent'
                   : 'bg-[var(--panel-bg)] text-[var(--text-primary)] border-[var(--panel-border)] hover:bg-[var(--input-bg)]'
                   }`}
               >
-                List
+                <span className="inline-flex items-center gap-2">
+                  <LayoutList size={16} />
+                  List
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setViewMode('calendar')}
+                aria-pressed={viewMode === 'calendar'}
                 className={`px-4 py-2 rounded-lg border text-sm font-semibold transition ${viewMode === 'calendar'
                   ? 'bg-[var(--link-primary)] text-white border-transparent'
                   : 'bg-[var(--panel-bg)] text-[var(--text-primary)] border-[var(--panel-border)] hover:bg-[var(--input-bg)]'
                   }`}
               >
-                Calendar
+                <span className="inline-flex items-center gap-2">
+                  <CalendarDays size={16} />
+                  Calendar
+                </span>
               </button>
             </div>
           </div>
