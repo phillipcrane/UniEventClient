@@ -435,7 +435,47 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   .date-range-separator {
-    font-size: 0.8rem;
+    font-size: 0;
+  }
+}
+
+/* Desktop-only: keep date range as two separate boxes with arrow separator */
+@media (min-width: 1024px) {
+  .date-range-row {
+    display: flex;
+    align-items: center;
+    column-gap: 0.8rem;
+    border: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .date-range-row>svg {
+    display: none;
+  }
+
+  .date-range-input {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 0;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    border-radius: 0.75rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .date-range-separator {
+    padding-left: 0;
+    padding-right: 0;
+    font-size: 0;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .date-range-separator::before {
+    content: '→';
+    font-size: 1.2rem;
+    color: var(--text-subtle);
   }
 }
 
