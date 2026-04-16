@@ -231,21 +231,21 @@ export function EventPage() {
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-subtle)]">Event</p>
                     <h2 className="mt-2 text-2xl font-bold text-[var(--text-primary)] md:text-3xl">{event.title}</h2>
-                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-[var(--text-subtle)]">
+                    <div className="event-meta-row mt-2 flex flex-wrap gap-2 text-sm text-[var(--text-subtle)]">
                       <span>{formatEventStart(event.startTime)}</span>
-                      <span aria-hidden="true">•</span>
+                      <span className="event-meta-divider" aria-hidden="true">•</span>
                       <span>Organizer: {organizerName}</span>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="event-actions-row flex flex-wrap items-center gap-2">
                     <div className="relative">
                       <button
                         onClick={() => setShowAddMenu((v) => !v)}
                         aria-label="Add event to calendar"
                         aria-haspopup="menu"
                         aria-expanded={showAddMenu}
-                        className="inline-flex items-center gap-2 rounded-lg bg-[var(--link-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--link-primary-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--input-focus-border)]"
+                        className="event-action-button inline-flex items-center gap-2 rounded-lg bg-[var(--link-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--link-primary-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--input-focus-border)]"
                       >
                         Add to calendar
                       </button>
@@ -282,8 +282,9 @@ export function EventPage() {
                       unlikedLabel="Save"
                       likedLabel="Saved"
                       onToggleChange={handleLikeToggle}
+                      className="event-action-button"
                     />
-                    <ShareButton event={event} />
+                    <ShareButton event={event} className="event-action-button" />
                   </div>
                 </div>
 
