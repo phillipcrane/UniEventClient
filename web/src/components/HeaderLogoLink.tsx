@@ -5,15 +5,20 @@ const LOGO_SRC = 'https://firebasestorage.googleapis.com/v0/b/dtuevent-8105b.fir
 export function HeaderLogoLink() {
     const location = useLocation();
     const isHomePage = location.pathname === '/';
+    const tooltip = isHomePage ? 'Home (refresh page)' : 'Go to home';
 
     return (
         <Link
             to="/"
             reloadDocument={isHomePage}
             aria-label={isHomePage ? 'Refresh the main page' : 'Go to the main page'}
-            className="header-logo-link"
+            title={tooltip}
+            className="header-logo-link group relative"
         >
             <img src={LOGO_SRC} alt="DTU Logo" className="header-logo" />
+            <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--panel-border)] bg-[var(--panel-bg)] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-subtle)] opacity-0 shadow-md transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+                Home
+            </span>
         </Link>
     );
 }

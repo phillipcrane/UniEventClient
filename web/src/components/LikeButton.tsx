@@ -10,9 +10,20 @@ type LikeButtonProps = {
     compact?: boolean;
     iconOnly?: boolean;
     className?: string;
+    likedLabel?: string;
+    unlikedLabel?: string;
+    onToggleChange?: (isLiked: boolean) => void;
 };
 
-export function LikeButton({ event, compact = false, iconOnly = false, className = '' }: LikeButtonProps) {
+export function LikeButton({
+    event,
+    compact = false,
+    iconOnly = false,
+    className = '',
+    likedLabel = 'Liked',
+    unlikedLabel = 'Like',
+    onToggleChange,
+}: LikeButtonProps) {
     const navigate = useNavigate();
     const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
     const [isLiked, setIsLiked] = useState(false);
@@ -58,12 +69,13 @@ export function LikeButton({ event, compact = false, iconOnly = false, className
             setIsUpdating(true);
             const nextLiked = await toggleLikedEvent(currentUser.uid, event.id);
             setIsLiked(nextLiked);
+            onToggleChange?.(nextLiked);
         } finally {
             setIsUpdating(false);
         }
     };
 
-    const label = isLiked ? 'Liked' : 'Like';
+    const label = isLiked ? likedLabel : unlikedLabel;
     const buttonClasses = compact
         ? 'inline-flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)]'
         : 'inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition-colors duration-200';

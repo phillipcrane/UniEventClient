@@ -1,18 +1,50 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
-import type { Event } from '../types';
-import { getEventById } from '../services/dal';
+import type { Event, Page } from '../types';
+import { getEventById, getPages } from '../services/dal';
 import { formatEventStart } from '../utils/eventUtils';
 import { downloadIcs, buildGoogleCalendarUrl } from '../utils/calendarUtils';
-import { FacebookLinkButton } from '../components/FacebookLinkButton';
 import { LikeButton } from '../components/LikeButton';
 import { HeaderLogoLink } from '../components/HeaderLogoLink';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { ShareButton } from '../components/ShareButton';
+import { ArrowLeft, CalendarDays, Clock3, MapPin } from 'lucide-react';
+
+function formatTimeRange(startTime: string, endTime?: string) {
+  const formatter = new Intl.DateTimeFormat('da-DK', { hour: '2-digit', minute: '2-digit' });
+  const start = formatter.format(new Date(startTime));
+
+  if (!endTime) {
+    return start;
+  }
+
+  const end = formatter.format(new Date(endTime));
+  return `${start} - ${end}`;
+}
+
+function getOrganizerName(event: Event | null, pages: Page[]) {
+  if (!event) {
+    return 'Unknown';
+  }
+
+  const eventData = event as Event & { organizerName?: string; pageName?: string };
+  if (eventData.organizerName) {
+    return eventData.organizerName;
+  }
+
+  if (eventData.pageName) {
+    return eventData.pageName;
+  }
+
+  const matchedPage = pages.find((page) => page.id === event.pageId);
+  return matchedPage?.name || 'Unknown';
+}
 
 export function EventPage() {
   const { id } = useParams<{ id: string }>(); // id for /events/:id
   const navigate = useNavigate(); // surprise tool that will help us later
   const [event, setEvent] = useState<Event | null>(null); // make events stateful
+  const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // () => means "when this happens, do this". Lambda function / arrow function syntax.
@@ -21,14 +53,23 @@ export function EventPage() {
 
     // fetch event by id from dal.ts
     const getEventFromDal = async () => {
-      const fetchedEvent = await getEventById(id);
-      setEvent(fetchedEvent);
-      setIsLoading(false);
+      setIsLoading(true);
+      try {
+        const [fetchedEvent, fetchedPages] = await Promise.all([
+          getEventById(id),
+          getPages().catch(() => []),
+        ]);
+        setEvent(fetchedEvent);
+        setPages(fetchedPages);
+      } finally {
+        setIsLoading(false);
+      }
     };
     getEventFromDal(); // async
   }, [id]);
 
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [saveFeedback, setSaveFeedback] = useState<string>('');
   const addMenuRef = useRef<HTMLDivElement | null>(null);
 
   // close the menu when clicking outside
@@ -49,6 +90,13 @@ export function EventPage() {
     navigate('/'); // ...go back to main events list
   };
 
+  const handleLikeToggle = (isSaved: boolean) => {
+    setSaveFeedback(isSaved ? 'Saved to your profile.' : 'Removed from saved events.');
+    window.setTimeout(() => setSaveFeedback(''), 1500);
+  };
+
+  const organizerName = getOrganizerName(event, pages);
+
   // Main Rendering of EventPage
   return (
     <div className="page flex flex-col">
@@ -57,9 +105,9 @@ export function EventPage() {
         <div className="header-content">
           <HeaderLogoLink />
           <div className="header-text">
-            <h1 className="header-title">{event?.title || 'Event details'}</h1>
+            <h1 className="header-title">Event details</h1>
             <p className="header-subtitle">
-              {event ? 'View the event, add it to your calendar, or save it.' : 'Loading event details...'}
+              {event ? 'Explore details, save the event, and share it.' : 'Loading event details...'}
             </p>
           </div>
         </div>
@@ -68,9 +116,12 @@ export function EventPage() {
           <button
             onClick={() => handleBack()}
             aria-label="Back to events"
-            className="rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] sm:px-4 sm:text-sm"
+            className="rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--input-focus-border)] sm:px-4 sm:text-sm"
           >
-            Back
+            <span className="inline-flex items-center gap-1.5">
+              <ArrowLeft size={14} />
+              Back to events
+            </span>
           </button>
 
           <ThemeToggle />
@@ -79,7 +130,7 @@ export function EventPage() {
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto w-full">
-        <div className="max-w-4xl mx-auto pb-16 px-4">
+        <div className="max-w-5xl mx-auto pb-16 px-4">
           {isLoading && (
             <div className="bubble p-6 mb-6">
               <p className="text-sm text-[var(--text-subtle)] animate-pulse">Loading event…</p>
@@ -95,100 +146,114 @@ export function EventPage() {
 
           {event && (
             <>
-              <div className="mb-6 flex flex-wrap items-center gap-2">
-                <div className="relative">
-                  <button
-                    onClick={() => setShowAddMenu(v => !v)}
-                    className="bg-[var(--link-primary)] hover:bg-[var(--link-primary-hover)] text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition"
-                  >
-                    Add to calendar
-                  </button>
-
-                  {showAddMenu && (
-                    <div
-                      ref={addMenuRef}
-                      className="absolute left-0 mt-2 w-44 bg-[var(--panel-bg)] border border-[var(--panel-border)] rounded-lg shadow-xl z-50"
-                    >
-                      <button
-                        onClick={() => {
-                          window.open(buildGoogleCalendarUrl(event), '_blank', 'noopener,noreferrer');
-                          setShowAddMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm font-semibold hover:bg-[var(--input-bg)] transition"
-                      >
-                        Google Calendar
-                      </button>
-                      <button
-                        onClick={() => {
-                          downloadIcs(event);
-                          setShowAddMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm font-semibold hover:bg-[var(--input-bg)] transition"
-                      >
-                        Apple / .ics
-                      </button>
+              <section className="mb-6 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-5 shadow-lg md:p-6">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-subtle)]">Event</p>
+                    <h2 className="mt-2 text-2xl font-bold text-[var(--text-primary)] md:text-3xl">{event.title}</h2>
+                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-[var(--text-subtle)]">
+                      <span>{formatEventStart(event.startTime)}</span>
+                      <span aria-hidden="true">•</span>
+                      <span>Organizer: {organizerName}</span>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowAddMenu((v) => !v)}
+                        aria-label="Add event to calendar"
+                        aria-haspopup="menu"
+                        aria-expanded={showAddMenu}
+                        className="inline-flex items-center gap-2 rounded-lg bg-[var(--link-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--link-primary-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--input-focus-border)]"
+                      >
+                        Add to calendar
+                      </button>
+
+                      {showAddMenu && (
+                        <div
+                          ref={addMenuRef}
+                          className="absolute left-0 z-50 mt-2 w-48 overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] shadow-xl"
+                        >
+                          <button
+                            onClick={() => {
+                              window.open(buildGoogleCalendarUrl(event), '_blank', 'noopener,noreferrer');
+                              setShowAddMenu(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--input-bg)]"
+                          >
+                            Google Calendar
+                          </button>
+                          <button
+                            onClick={() => {
+                              downloadIcs(event);
+                              setShowAddMenu(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--input-bg)]"
+                          >
+                            Apple / .ics
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <LikeButton
+                      event={event}
+                      unlikedLabel="Save"
+                      likedLabel="Saved"
+                      onToggleChange={handleLikeToggle}
+                    />
+                    <ShareButton event={event} />
+                  </div>
                 </div>
 
-                <LikeButton event={event} />
-                <FacebookLinkButton event={event} />
-              </div>
-          
-              {/* Hero / Cover Image */}
-              <div className="w-full h-[45vh] min-h-[260px] relative rounded-b-lg overflow-hidden mb-6">
+                <p aria-live="polite" className="mt-3 text-xs font-semibold text-[var(--text-subtle)]">
+                  {saveFeedback}
+                </p>
+              </section>
+
+              <section className="mb-6 overflow-hidden rounded-2xl border border-[var(--panel-border)] shadow-lg">
+                <div className="relative w-full h-[46vh] min-h-[260px]">
                 <img
                   src={event.coverImageUrl ?? ''}
                   alt={event.title}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-              </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-5">
+                  <div className="inline-flex items-center rounded-full border border-white/20 bg-black/30 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                    Event details
+                  </div>
+                </div>
+                </div>
+              </section>
 
-              {/* Event Header */}
-              <section className="-mt-12 relative">
-                <div className="bubble p-6 shadow-xl">
-                  <h1 className="text-3xl font-bold text-primary mb-2">
-                    {event.title}
-                  </h1>
+              <section className="grid gap-4 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-5 shadow-lg md:grid-cols-2">
+                <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--input-bg)]/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">Time</p>
+                  <div className="mt-3 space-y-2 text-sm text-[var(--text-primary)]">
+                    <p className="inline-flex items-center gap-2"><CalendarDays size={14} className="text-[var(--text-subtle)]" />{new Intl.DateTimeFormat('da-DK', { weekday: 'long' }).format(new Date(event.startTime))}</p>
+                    <p className="inline-flex items-center gap-2"><Clock3 size={14} className="text-[var(--text-subtle)]" />{formatTimeRange(event.startTime, event.endTime)}</p>
+                  </div>
+                </div>
 
-                  {/* Location */}
-                  {event.place && (
-                    <div className="text-subtle text-sm leading-relaxed">
-                      <div className="font-semibold text-primary text-base">
-                        {event.place.name}
-                      </div>
-
-                      {event.place.location && (
-                        <div className="mt-1">
-                          {event.place.location.street && (
-                            <div>{event.place.location.street}</div>
-                          )}
-                          {(event.place.location.zip || event.place.location.city) && (
-                            <div>
-                              {event.place.location.zip} {event.place.location.city}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="text-sm mt-4 text-subtle">
-                    {formatEventStart(event.startTime)}
+                <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--input-bg)]/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">Where</p>
+                  <div className="mt-3 space-y-2 text-sm text-[var(--text-primary)]">
+                    <p className="inline-flex items-center gap-2"><MapPin size={14} className="text-[var(--text-subtle)]" />{event.place?.name || 'Location TBA'}</p>
                   </div>
                 </div>
               </section>
 
-              {/* Description */}
-              <section className="mt-6">
-                <div className="bubble p-6">
+              <section className="mt-4 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-6 shadow-lg">
+                <h3 className="mb-3 text-lg font-bold text-[var(--text-primary)]">About this event</h3>
+                <div className="text-sm leading-relaxed text-[var(--text-body)]">
                   {event.description ? (
-                    <div className="prose prose-sm max-w-none text-primary whitespace-pre-wrap break-words overflow-hidden">
+                    <div className="whitespace-pre-wrap break-words overflow-hidden">
                       {event.description}
                     </div>
                   ) : (
-                    <p className="text-subtle italic">No description available</p>
+                    <p className="italic text-[var(--text-subtle)]">No description available.</p>
                   )}
                 </div>
               </section>
