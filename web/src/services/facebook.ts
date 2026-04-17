@@ -1,6 +1,6 @@
 export function buildFacebookLoginUrl() {
   const FB_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID;
-  const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+  const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin;
   const FB_REDIRECT_URI = encodeURIComponent(`${BACKEND_BASE_URL}/api/facebook/callback`);
   const FB_SCOPES = [
     'pages_show_list',

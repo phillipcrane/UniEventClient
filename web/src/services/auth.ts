@@ -1,4 +1,4 @@
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? '';
 const TOKEN_KEY = 'unievent_token';
 const USER_KEY = 'unievent_user';
 
