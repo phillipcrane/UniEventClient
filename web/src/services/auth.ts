@@ -23,6 +23,12 @@ type SignupInput = {
 
 type AuthErrorContext = 'login' | 'signup' | 'general';
 
+type HttpError = Error & { status: number };
+
+function createHttpError(status: number, message: string): HttpError {
+    return Object.assign(new Error(message), { status });
+}
+
 // Module-level listener list for auth state subscriptions
 const listeners: Array<(user: AuthUser | null) => void> = [];
 
@@ -65,7 +71,10 @@ export async function loginWithEmail(email: string, password: string): Promise<A
 
     if (!response.ok) {
         const body = await response.json().catch(() => ({})) as Record<string, unknown>;
-        throw { status: response.status, message: (body['message'] as string | undefined) ?? response.statusText };
+        throw createHttpError(
+            response.status,
+            (body['message'] as string | undefined) ?? response.statusText,
+        );
     }
 
     const data = await response.json() as { token: string; username: string; email: string };
@@ -84,7 +93,10 @@ export async function signupWithEmail({ username, email, password, role, organiz
 
     if (!response.ok) {
         const body = await response.json().catch(() => ({})) as Record<string, unknown>;
-        throw { status: response.status, message: (body['message'] as string | undefined) ?? response.statusText };
+        throw createHttpError(
+            response.status,
+            (body['message'] as string | undefined) ?? response.statusText,
+        );
     }
 
     const data = await response.json() as { token: string; username: string; email: string };
