@@ -9,6 +9,14 @@ import type { Event, Page, Place } from '../types';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? '';
 
+function buildBackendUrl(path: string): URL {
+  return new URL(path, BACKEND_URL || window.location.origin);
+}
+
+function buildBackendUrlString(path: string): string {
+  return buildBackendUrl(path).toString();
+}
+
 interface ApiResponse<T> {
   content: T[];
   totalElements: number;
@@ -53,7 +61,7 @@ function mapEventResponse(data: EventApiResponse): Event {
     startTime: data.startTime,
     endTime: data.endTime,
     place: data.place,
-    coverImageUrl: data.coverImageId ? `${BACKEND_URL}/media/${data.coverImageId}` : undefined,
+    coverImageUrl: data.coverImageId ? buildBackendUrlString(`/media/${data.coverImageId}`) : undefined,
     eventURL: data.eventUrl,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
@@ -76,7 +84,7 @@ function mapPageResponse(data: PageApiResponse): Page {
  * Fetch all pages (paginated, defaults to first 100)
  */
 export async function getPages(page: number = 0, size: number = 100): Promise<Page[]> {
-  const url = new URL(`${BACKEND_URL}/api/pages`);
+  const url = buildBackendUrl('/api/pages');
   url.searchParams.append('page', page.toString());
   url.searchParams.append('size', size.toString());
 
@@ -93,7 +101,7 @@ export async function getPages(page: number = 0, size: number = 100): Promise<Pa
  * Fetch active pages only (paginated)
  */
 export async function getActivePages(page: number = 0, size: number = 100): Promise<Page[]> {
-  const url = new URL(`${BACKEND_URL}/api/pages/active`);
+  const url = buildBackendUrl('/api/pages/active');
   url.searchParams.append('page', page.toString());
   url.searchParams.append('size', size.toString());
 
