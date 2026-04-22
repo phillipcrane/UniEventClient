@@ -308,6 +308,24 @@ export function ProfilePage() {
                                 Connect Facebook Page
                             </a>
                         </div>
+
+                        <div className="mt-4 rounded-xl border border-[var(--panel-border)] bg-[var(--input-bg)]/65 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
+                                Manual Event
+                            </p>
+                            <h4 className="mt-1 text-base font-bold text-[var(--text-primary)]">
+                                Add event manually
+                            </h4>
+                            <p className="mt-1 text-sm text-[var(--text-subtle)]">
+                                Create and review event details in a dedicated organizer form.
+                            </p>
+                            <Link
+                                to="/organizer/events/new"
+                                className="mt-3 inline-flex items-center justify-center rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)]"
+                            >
+                                Open Manual Event Form
+                            </Link>
+                        </div>
                     </section>
                 )}
 

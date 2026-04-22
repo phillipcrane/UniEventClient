@@ -7,6 +7,7 @@ import { DataDeletionPage } from './pages/DataDeletionPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { ManualEventPage } from './pages/ManualEventPage';
 
 export const router = createBrowserRouter([
   {
@@ -40,5 +41,9 @@ export const router = createBrowserRouter([
   {
     path: '/profile',
     element: <ProfilePage />,
+  },
+  {
+    path: '/organizer/events/new',
+    element: <ManualEventPage />,
   },
 ]);
