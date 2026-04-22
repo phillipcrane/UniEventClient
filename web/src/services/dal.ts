@@ -226,7 +226,7 @@ export async function getEventById(id: string): Promise<Event | null> {
  * Fetch events for a specific page/organizer
  */
 export async function getEventsByPageId(pageId: string, page: number = 0, size: number = 100): Promise<Event[]> {
-  const url = new URL(`${BACKEND_URL}/api/events/page/${pageId}`);
+  const url = buildBackendUrl(`/api/events/page/${pageId}`);
   url.searchParams.append('page', page.toString());
   url.searchParams.append('size', size.toString());
 
