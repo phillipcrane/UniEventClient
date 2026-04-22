@@ -80,6 +80,43 @@ function mapPageResponse(data: PageApiResponse): Page {
   };
 }
 
+async function createFetchError(response: Response, context: string): Promise<Error> {
+  const statusDetails = response.statusText
+    ? `${response.status} ${response.statusText}`
+    : `${response.status}`;
+
+  let message = `${context}: ${statusDetails}`;
+
+  try {
+    const bodyText = await response.text();
+
+    if (bodyText) {
+      try {
+        const parsed: unknown = JSON.parse(bodyText);
+        if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          'message' in parsed &&
+          typeof parsed.message === 'string' &&
+          parsed.message.trim() !== ''
+        ) {
+          message = `${message} - ${parsed.message}`;
+        } else if (bodyText.trim() !== '') {
+          message = `${message} - ${bodyText}`;
+        }
+      } catch {
+        if (bodyText.trim() !== '') {
+          message = `${message} - ${bodyText}`;
+        }
+      }
+    }
+  } catch {
+    // Ignore body parsing failures and fall back to status-based message.
+  }
+
+  return new Error(message);
+}
+
 /**
  * Fetch all pages (paginated, defaults to first 100)
  */
@@ -90,7 +127,7 @@ export async function getPages(page: number = 0, size: number = 100): Promise<Pa
 
   const response = await fetch(url.toString());
   if (!response.ok) {
-    throw new Error(`Failed to fetch pages: ${response.statusText}`);
+    throw await createFetchError(response, 'Failed to fetch pages');
   }
 
   const data: ApiResponse<PageApiResponse> = await response.json();
@@ -107,7 +144,7 @@ export async function getActivePages(page: number = 0, size: number = 100): Prom
 
   const response = await fetch(url.toString());
   if (!response.ok) {
-    throw new Error(`Failed to fetch active pages: ${response.statusText}`);
+    throw await createFetchError(response, 'Failed to fetch active pages');
   }
 
   const data: ApiResponse<PageApiResponse> = await response.json();
