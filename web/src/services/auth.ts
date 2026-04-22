@@ -109,7 +109,7 @@ export async function signupWithEmail({ username, email, password, role, organiz
         uid: data.username,
         displayName: data.username,
         role,
-        organizerNames: [...organizerNames],
+        organizerNames: organizerNames ? [...organizerNames] : undefined,
     };
     persistUser(user);
     notifyListeners(user);
