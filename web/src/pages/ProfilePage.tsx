@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { HeaderLogoLink } from '../components/HeaderLogoLink';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Footer } from '../components/Footer';
-import { getAccountProfile, onAuthUserChanged, signOutCurrentUser, type AccountRole, type AuthUser } from '../services/auth';
+import { getAccountProfile, signOutCurrentUser, type AccountRole, type AuthUser } from '../services/auth';
+import { useAuth } from '../context/AuthContext';
 import { buildFacebookLoginUrl } from '../services/facebook';
 import { getEvents } from '../services/dal';
-import { getLikedEventIdsAsync, LIKES_CHANGED_EVENT } from '../services/likes';
 import { formatEventStart } from '../utils/eventUtils';
 import type { Event as EventType } from '../types';
 import { LikeButton } from '../components/LikeButton';
+import { useLikes } from '../context/LikesContext';
 import { CalendarDays, CircleUserRound, Heart, LogOut, MapPin, Ticket } from 'lucide-react';
 
 function buildUsername(user: AuthUser | null) {
@@ -86,24 +87,19 @@ function SavedEventCard({ event }: { event: EventType }) {
 
 export function ProfilePage() {
     const navigate = useNavigate();
-    const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+    const { currentUser } = useAuth();
+    const { likedIds } = useLikes();
     const [accountRole, setAccountRole] = useState<AccountRole>('user');
     const [organizerNames, setOrganizerNames] = useState<string[]>([]);
     const [isSigningOut, setIsSigningOut] = useState(false);
     const [allEvents, setAllEvents] = useState<EventType[]>([]);
-    const [likedEvents, setLikedEvents] = useState<EventType[]>([]);
     const [isLoadingLikedEvents, setIsLoadingLikedEvents] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthUserChanged((user) => {
-            setCurrentUser(user);
-            if (!user) {
-                navigate('/login', { replace: true });
-            }
-        });
-
-        return unsubscribe;
-    }, [navigate]);
+        if (currentUser === null) {
+            navigate('/login', { replace: true });
+        }
+    }, [currentUser, navigate]);
 
     async function handleSignOut() {
         const shouldSignOut = window.confirm('Are you sure you want to log out?');
@@ -150,7 +146,6 @@ export function ProfilePage() {
         const loadEvents = async () => {
             if (!currentUser?.uid) {
                 setAllEvents([]);
-                setLikedEvents([]);
                 setIsLoadingLikedEvents(false);
                 return;
             }
@@ -159,14 +154,12 @@ export function ProfilePage() {
 
             try {
                 const events = await getEvents();
-                const likedEventIds = await getLikedEventIdsAsync(currentUser.uid);
 
                 if (cancelled) {
                     return;
                 }
 
                 setAllEvents(events);
-                setLikedEvents(filterAndSortLikedEvents(events, likedEventIds));
             } finally {
                 if (!cancelled) {
                     setIsLoadingLikedEvents(false);
@@ -181,31 +174,9 @@ export function ProfilePage() {
         };
     }, [currentUser?.uid]);
 
-    useEffect(() => {
-        if (!currentUser?.uid) {
-            return;
-        }
-
-        let cancelled = false;
-
-        const syncLikedEvents = async () => {
-            const likedEventIds = await getLikedEventIdsAsync(currentUser.uid);
-            if (!cancelled) {
-                setLikedEvents(filterAndSortLikedEvents(allEvents, likedEventIds));
-            }
-        };
-
-        void syncLikedEvents();
-        const handleLikesChanged = () => {
-            void syncLikedEvents();
-        };
-        window.addEventListener(LIKES_CHANGED_EVENT, handleLikesChanged);
-
-        return () => {
-            cancelled = true;
-            window.removeEventListener(LIKES_CHANGED_EVENT, handleLikesChanged);
-        };
-    }, [allEvents, currentUser?.uid]);
+    const likedEvents = useMemo(() => {
+        return filterAndSortLikedEvents(allEvents, Array.from(likedIds));
+    }, [allEvents, likedIds]);
 
     return (
         <div className="min-h-screen flex flex-col">

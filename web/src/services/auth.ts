@@ -1,6 +1,8 @@
+import { STORAGE_KEY_TOKEN, STORAGE_KEY_USER } from '../constants';
+
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? '';
-const TOKEN_KEY = 'unievent_token';
-const USER_KEY = 'unievent_user';
+const TOKEN_KEY = STORAGE_KEY_TOKEN;
+const USER_KEY = STORAGE_KEY_USER;
 
 export type AuthUser = {
     username: string;
@@ -40,7 +42,12 @@ function notifyListeners(user: AuthUser | null): void {
 
 function persistUser(user: AuthUser): void {
     localStorage.setItem(TOKEN_KEY, user.token);
-    localStorage.setItem(USER_KEY, JSON.stringify({ username: user.username, email: user.email }));
+    localStorage.setItem(USER_KEY, JSON.stringify({
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        organizerNames: user.organizerNames,
+    }));
 }
 
 function clearUser(): void {
@@ -53,8 +60,21 @@ export function getCurrentUser(): AuthUser | null {
     const raw = localStorage.getItem(USER_KEY);
     if (!token || !raw) return null;
     try {
-        const { username, email } = JSON.parse(raw) as { username: string; email: string };
-        return { username, email, token, uid: username, displayName: username };
+        const stored = JSON.parse(raw) as {
+            username: string;
+            email: string;
+            role?: AccountRole;
+            organizerNames?: string[];
+        };
+        return {
+            username: stored.username,
+            email: stored.email,
+            token,
+            uid: stored.username,
+            displayName: stored.username,
+            role: stored.role,
+            organizerNames: stored.organizerNames,
+        };
     } catch {
         return null;
     }
@@ -131,22 +151,6 @@ export async function signOutCurrentUser(): Promise<void> {
     notifyListeners(null);
 }
 
-export function getStoredAccountRole(uid: string): AccountRole {
-    const user = getCurrentUser();
-    if (!user || (uid && user.uid !== uid)) {
-        return 'user';
-    }
-    return user.role ?? 'user';
-}
-
-export function getStoredOrganizerNames(uid: string): string[] {
-    const user = getCurrentUser();
-    if (!user || (uid && user.uid !== uid)) {
-        return [];
-    }
-    return Array.isArray(user.organizerNames) ? [...user.organizerNames] : [];
-}
-
 export async function getAccountProfile(uid?: string): Promise<{ role: AccountRole; organizerNames: string[] }> {
     const user = getCurrentUser();
     if (!user || !user.token || (uid && user.uid !== uid)) {
@@ -183,7 +187,6 @@ export async function getAccountProfile(uid?: string): Promise<{ role: AccountRo
     return profile;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function mapAuthError(error: unknown, _context?: AuthErrorContext): string {
     if (error && typeof error === 'object') {
         const e = error as { status?: number; message?: string };

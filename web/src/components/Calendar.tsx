@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Event } from '../types';
+import { CALENDAR_MAX_EVENT_SPAN_DAYS, CALENDAR_EVENTS_PER_DAY } from '../constants';
 import { formatEventStart } from '../utils/eventUtils';
 
 const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -83,19 +84,16 @@ export function CalendarView({ events }: { events: Event[] }) {
       const endDay = new Date(endDate);
       endDay.setHours(0, 0, 0, 0);
 
-      // Avoid unbounded looping on invalid end dates
-      const maxDays = 30;
       let cursor = new Date(startDay);
       let days = 0;
 
-      while (cursor <= endDay && days < maxDays) {
+      while (cursor <= endDay && days < CALENDAR_MAX_EVENT_SPAN_DAYS) {
         addEventForKey(formatYMD(cursor), evt);
         cursor.setDate(cursor.getDate() + 1);
         days += 1;
       }
 
-      // If event spans more than maxDays, ensure at least start and end are represented
-      if (days >= maxDays && endDay >= cursor) {
+      if (days >= CALENDAR_MAX_EVENT_SPAN_DAYS && endDay >= cursor) {
         addEventForKey(formatYMD(endDay), evt);
       }
     }
@@ -223,7 +221,7 @@ export function CalendarView({ events }: { events: Event[] }) {
                   </div>
 
                   <div className="flex-1 overflow-hidden">
-                    {dayEvents.slice(0, 3).map(evt => (
+                    {dayEvents.slice(0, CALENDAR_EVENTS_PER_DAY).map(evt => (
                       <button
                         key={evt.id}
                         onClick={() => navigate(`/events/${evt.id}`)}
@@ -235,8 +233,8 @@ export function CalendarView({ events }: { events: Event[] }) {
                         </span>
                       </button>
                     ))}
-                    {dayEvents.length > 3 && (
-                      <div className="text-[11px] text-[var(--text-subtle)]">+ {dayEvents.length - 3} more</div>
+                    {dayEvents.length > CALENDAR_EVENTS_PER_DAY && (
+                      <div className="text-[11px] text-[var(--text-subtle)]">+ {dayEvents.length - CALENDAR_EVENTS_PER_DAY} more</div>
                     )}
                   </div>
                 </div>

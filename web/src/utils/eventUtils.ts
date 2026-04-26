@@ -1,6 +1,6 @@
-// Utilities for event rendering and formatting
+import { APP_LOCALE } from '../constants';
 
-const dateTimeFormatter = new Intl.DateTimeFormat('da-DK', {
+const dateTimeFormatter = new Intl.DateTimeFormat(APP_LOCALE, {
   dateStyle: 'medium',
   timeStyle: 'short',
 });

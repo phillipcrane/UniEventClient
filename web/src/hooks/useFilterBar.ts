@@ -1,36 +1,26 @@
-import { useEffect, useState } from 'react'; // react funktions
-import { parseDateOnly, startOfDayMs, endOfDayMs } from '../utils/dateUtils'; // function from date utils
-import type { Event as EventType } from '../types'; // import event type
+import { useEffect, useState } from 'react';
+import { SEARCH_DEBOUNCE_MS } from '../constants';
+import { parseDateOnly, startOfDayMs, endOfDayMs } from '../utils/dateUtils';
+import type { Event as EventType } from '../types';
 import type { SortMode } from '../components/FilterBar';
 
-// custom react function to filter events
 export function useFilterBar(events: EventType[]) {
-  const [pageId, setPageId] = useState<string>('');
-
-  // text search
-  // debounce = wait for user to stop typing
-  // () => is shorthand for making a quick new function w/ void return
+  const [pageIds, setPageIds] = useState<string[]>([]);
   const [query, setQuery] = useState<string>('');
-  const [debouncedQuery, setDebouncedQuery] = useState<string>(''); // only update after user stops typing for 250ms
-  useEffect(() => { // kører altid når query ændrer sig
+  const [debouncedQuery, setDebouncedQuery] = useState<string>('');
+
+  useEffect(() => {
     const id = setTimeout(() => {
       setDebouncedQuery(query.trim().toLowerCase());
-    }, 250); // timeout for 250ms delay 
-    return () => clearTimeout(id); // if query changes again within 250ms, clear previous timeout and start new one
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(id);
   }, [query]);
 
-  // date range states (from / to)
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
 
-  // apply filters
+  const filteredByPage = pageIds.length > 0 ? events.filter(e => pageIds.includes(e.pageId)) : events;
 
-  //creates a variable using result of page filter and
-  // if pageid is not empty then filter events by pageid else return all events
-  const filteredByPage = pageId ? events.filter(e => e.pageId === pageId) : events;
-
-  // creates a variable using result of text filter
-  // for every event if haystack icludes either the title, description or place name then include it in the result
   const textFiltered = debouncedQuery
     ? filteredByPage.filter(event => {
       const haystack = (
@@ -42,48 +32,42 @@ export function useFilterBar(events: EventType[]) {
     })
     : filteredByPage;
 
-  const fromObj = parseDateOnly(fromDate); // turn fromDate string into date object
-  const toObj = parseDateOnly(toDate); // turn toDate string into date object
-  const invalidRange = !!(fromObj && toObj && toObj < fromObj); // check if range is invalid
-  const effectiveToObj = invalidRange ? undefined : toObj; //if invalid then ignore toDate
+  const fromObj = parseDateOnly(fromDate);
+  const toObj = parseDateOnly(toDate);
+  const invalidRange = !!(fromObj && toObj && toObj < fromObj);
+  const effectiveToObj = invalidRange ? undefined : toObj;
 
-  // filter by date range 
-  const dateFiltered = textFiltered.filter(event => { // for each event
-    const eventMs = new Date(event.startTime).getTime(); // get timestamp of event start time
-    if (fromObj && eventMs < startOfDayMs(fromObj)) return false; // if fromdate is after event start then exclude
-    if (effectiveToObj && eventMs > endOfDayMs(effectiveToObj)) return false; // if todate is before event start then exclude
+  const dateFiltered = textFiltered.filter(event => {
+    const eventMs = new Date(event.startTime).getTime();
+    if (fromObj && eventMs < startOfDayMs(fromObj)) return false;
+    if (effectiveToObj && eventMs > endOfDayMs(effectiveToObj)) return false;
     return true;
   });
 
+  const [sortMode, setSortMode] = useState<SortMode>('upcoming');
 
-
-  // added: sort mode for upcoming / newest / all
-  const [sortMode, setSortMode] = useState<SortMode>('upcoming'); // upcoming is default
-
-  // pick a created/added timestamp from an event (ms)
-  const getCreatedMs = (e: EventType) => { // for each event we 
-    // pick the first available "created/added" timestamp field and fallback to startTime if none exist
+  const getCreatedMs = (e: EventType) => {
     type LegacyEvent = EventType & { createdTime?: string; postedTime?: string; insertedAt?: string; addedAt?: string };
     const le = e as LegacyEvent;
     const maybe = le.createdTime ?? le.createdAt ?? le.postedTime ?? le.insertedAt ?? le.addedAt ?? le.startTime;
-    const ms = Date.parse(maybe); // parse maybe into ms
-    return isNaN(ms) ? new Date(e.startTime).getTime() : ms; // fallback to startTime if parsing fails
+    const ms = Date.parse(maybe);
+    return isNaN(ms) ? new Date(e.startTime).getTime() : ms;
   };
 
-  // create a new list with the filtered events and apply sortMode
   let list = [...dateFiltered];
 
-  if (sortMode === 'upcoming') { // if upcoming is selected then
-    list = list.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()); // sort by startTime ascending
-  } else if (sortMode === 'newest') { // if it is set to newest then
-    list = list.sort((a, b) => getCreatedMs(b) - getCreatedMs(a)); // sort by createdMs descending (so when they were added)
+  if (sortMode !== 'all') {
+    const now = new Date().getTime();
+    list = list.filter(event => new Date(event.startTime).getTime() >= now);
   }
 
-
+  if (sortMode === 'newest') {
+    list = list.sort((a, b) => getCreatedMs(b) - getCreatedMs(a));
+  }
 
   return {
-    pageId,
-    setPageId,
+    pageIds,
+    setPageIds,
     query,
     setQuery,
     fromDate,

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, Share2 } from 'lucide-react';
 import type { Event } from '../types';
+import { CLIPBOARD_FEEDBACK_MS } from '../constants';
 import { getEventUrl } from '../utils/eventUtils';
 
 type ShareButtonProps = {
@@ -31,7 +32,7 @@ export function ShareButton({ event, className = '' }: ShareButtonProps) {
       if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(eventUrl);
         setCopied(true);
-        window.setTimeout(() => setCopied(false), 1400);
+        window.setTimeout(() => setCopied(false), CLIPBOARD_FEEDBACK_MS);
         return;
       }
 

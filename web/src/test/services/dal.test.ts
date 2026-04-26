@@ -1,144 +1,109 @@
-import { describe, expect, it, vi, beforeAll, beforeEach, afterAll } from 'vitest';
-
-// Fake Firestore helpers so we can test behavior without real network/database calls.
-const mockDoc = vi.fn();
-const mockGetDoc = vi.fn();
-const mockCollection = vi.fn();
-const mockGetDocs = vi.fn();
-const mockOrderBy = vi.fn();
-const mockQuery = vi.fn();
-
-// Replace real firebase db object with a predictable fake one.
-vi.mock('../../services/firebase', () => ({
-    db: { name: 'fake-db' },
-}));
-
-// Replace Firestore SDK methods with controllable test doubles.
-vi.mock('firebase/firestore', () => ({
-    doc: (...args: unknown[]) => mockDoc(...args),
-    getDoc: (...args: unknown[]) => mockGetDoc(...args),
-    collection: (...args: unknown[]) => mockCollection(...args),
-    getDocs: (...args: unknown[]) => mockGetDocs(...args),
-    orderBy: (...args: unknown[]) => mockOrderBy(...args),
-    query: (...args: unknown[]) => mockQuery(...args),
-}));
-
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getEventById, getEvents, getPages } from '../../services/dal';
 
+const mockFetch = vi.fn();
+
+function jsonResponse(body: unknown, status = 200, statusText = 'OK'): Response {
+    return new Response(JSON.stringify(body), {
+        status,
+        statusText,
+        headers: { 'Content-Type': 'application/json' },
+    });
+}
+
+beforeEach(() => {
+    mockFetch.mockReset();
+    vi.stubGlobal('fetch', mockFetch);
+});
+
 describe('dal service', () => {
-    beforeAll(() => {
-        // Force the Firestore code path so these tests exercise the mapping logic.
-        vi.stubEnv('VITE_USE_FIRESTORE', 'true');
-    });
-
-    afterAll(() => {
-        // Restore original env vars so other test suites are not affected.
-        vi.unstubAllEnvs();
-    });
-
-    beforeEach(() => {
-        // Reset all fake calls before each test so tests stay independent.
-        mockDoc.mockReset();
-        mockGetDoc.mockReset();
-        mockCollection.mockReset();
-        mockGetDocs.mockReset();
-        mockOrderBy.mockReset();
-        mockQuery.mockReset();
-    });
-
-    it('maps fetched Firestore pages into app page format', async () => {
-        // Checks page data from Firestore is converted to the format the app expects.
-        mockCollection.mockReturnValueOnce({ path: 'pages' });
-        mockGetDocs.mockResolvedValueOnce({
-            docs: [
-                {
-                    id: 'p-1',
-                    data: () => ({ name: 'S-Huset', url: 'https://example.com/shuset', active: 1 }),
-                },
+    it('maps fetched pages into app page format', async () => {
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            content: [
+                { id: 'p-1', name: 'S-Huset', url: 'https://example.com/shuset', active: true },
             ],
-        });
+            totalElements: 1,
+            totalPages: 1,
+            number: 0,
+            size: 100,
+            hasNext: false,
+            hasPrevious: false,
+        }));
 
         const pages = await getPages();
 
         expect(pages).toEqual([
-            {
-                id: 'p-1',
-                name: 'S-Huset',
-                url: 'https://example.com/shuset',
-                active: true,
-            },
+            { id: 'p-1', name: 'S-Huset', url: 'https://example.com/shuset', active: true },
         ]);
+
+        const [firstCallUrl] = mockFetch.mock.calls[0] as [string];
+        const url = new URL(firstCallUrl);
+        expect(url.pathname).toBe('/api/pages');
+        expect(url.searchParams.get('page')).toBe('0');
+        expect(url.searchParams.get('size')).toBe('100');
     });
 
-    it('returns an empty page list when Firestore has no pages', async () => {
-        // Checks no pages in backend returns an empty list instead of an error.
-        mockCollection.mockReturnValueOnce({ path: 'pages' });
-        mockGetDocs.mockResolvedValueOnce({ docs: [] });
+    it('returns an empty page list when backend has no pages', async () => {
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            content: [],
+            totalElements: 0,
+            totalPages: 0,
+            number: 0,
+            size: 100,
+            hasNext: false,
+            hasPrevious: false,
+        }));
 
-        const pages = await getPages();
-
-        expect(pages).toEqual([]);
+        await expect(getPages()).resolves.toEqual([]);
     });
 
     it('keeps working even if some page fields are missing', async () => {
-        // Checks missing page fields do not crash mapping.
-        mockCollection.mockReturnValueOnce({ path: 'pages' });
-        mockGetDocs.mockResolvedValueOnce({
-            docs: [
-                {
-                    id: 'p-2',
-                    data: () => ({}),
-                },
-            ],
-        });
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            content: [{ id: 'p-2' }],
+            totalElements: 1,
+            totalPages: 1,
+            number: 0,
+            size: 100,
+            hasNext: false,
+            hasPrevious: false,
+        }));
 
-        const pages = await getPages();
-
-        expect(pages).toEqual([
-            {
-                id: 'p-2',
-                name: undefined,
-                url: undefined,
-                active: false,
-            },
+        await expect(getPages()).resolves.toEqual([
+            { id: 'p-2', name: undefined, url: undefined, active: undefined },
         ]);
     });
 
-    it('passes through Firestore errors when loading pages', async () => {
-        // Checks page read errors are passed up so UI can show an error state.
+    it('passes through network errors when loading pages', async () => {
         const readError = new Error('pages read failed');
-        mockCollection.mockReturnValueOnce({ path: 'pages' });
-        mockGetDocs.mockRejectedValueOnce(readError);
+        mockFetch.mockRejectedValueOnce(readError);
 
         await expect(getPages()).rejects.toBe(readError);
     });
 
-    it('maps fetched Firestore events into app event format', async () => {
-        // Checks event data and dates are converted into app-friendly values.
-        const eventsCollectionRef = { path: 'events' };
-        const orderByRef = { field: 'startTime' };
-        mockCollection.mockReturnValueOnce(eventsCollectionRef);
-        mockOrderBy.mockReturnValueOnce(orderByRef);
-        mockQuery.mockReturnValueOnce({ path: 'events?orderBy=startTime' });
-        mockGetDocs.mockResolvedValueOnce({
-            docs: [
+    it('maps fetched events into app event format', async () => {
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            content: [
                 {
                     id: 'e-1',
-                    data: () => ({
-                        pageId: 'p-1',
-                        title: 'Friday Bar',
-                        description: 'Live music',
-                        startTime: { toDate: () => new Date('2026-02-10T17:00:00.000Z') },
-                        endTime: { toDate: () => new Date('2026-02-10T22:00:00.000Z') },
-                        place: { name: 'DTU' },
-                        coverImageUrl: 'https://example.com/cover.jpg',
-                        eventURL: 'https://example.com/event/e-1',
-                        createdAt: { toDate: () => new Date('2026-01-01T10:00:00.000Z') },
-                        updatedAt: { toDate: () => new Date('2026-01-02T10:00:00.000Z') },
-                    }),
+                    pageId: 'p-1',
+                    title: 'Friday Bar',
+                    description: 'Live music',
+                    startTime: '2026-02-10T17:00:00.000Z',
+                    endTime: '2026-02-10T22:00:00.000Z',
+                    place: { name: 'DTU' },
+                    coverImageId: 42,
+                    eventUrl: 'https://example.com/event/e-1',
+                    createdAt: '2026-01-01T10:00:00.000Z',
+                    updatedAt: '2026-01-02T10:00:00.000Z',
                 },
             ],
-        });
+            totalElements: 1,
+            totalPages: 1,
+            number: 0,
+            size: 100,
+            hasNext: false,
+            hasPrevious: false,
+        }));
 
         const events = await getEvents();
 
@@ -151,52 +116,56 @@ describe('dal service', () => {
                 startTime: '2026-02-10T17:00:00.000Z',
                 endTime: '2026-02-10T22:00:00.000Z',
                 place: { name: 'DTU' },
-                coverImageUrl: 'https://example.com/cover.jpg',
+                coverImageUrl: expect.stringMatching(/\/media\/42$/),
                 eventURL: 'https://example.com/event/e-1',
                 createdAt: '2026-01-01T10:00:00.000Z',
                 updatedAt: '2026-01-02T10:00:00.000Z',
             },
         ]);
 
-        expect(mockCollection).toHaveBeenCalledWith({ name: 'fake-db' }, 'events');
-        expect(mockOrderBy).toHaveBeenCalledWith('startTime');
-        expect(mockQuery).toHaveBeenCalledWith(eventsCollectionRef, orderByRef);
+        const [firstCallUrl] = mockFetch.mock.calls[0] as [string];
+        const url = new URL(firstCallUrl);
+        expect(url.pathname).toBe('/api/events');
+        expect(url.searchParams.get('page')).toBe('0');
+        expect(url.searchParams.get('size')).toBe('100');
+        expect(url.searchParams.get('sort')).toBe('startTime,asc');
     });
 
-    it('returns an empty event list when Firestore has no events', async () => {
-        // Checks no events in backend returns an empty list.
-        mockCollection.mockReturnValueOnce({ path: 'events' });
-        mockOrderBy.mockReturnValueOnce({ field: 'startTime' });
-        mockQuery.mockReturnValueOnce({ path: 'events?orderBy=startTime' });
-        mockGetDocs.mockResolvedValueOnce({ docs: [] });
+    it('returns an empty event list when backend has no events', async () => {
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            content: [],
+            totalElements: 0,
+            totalPages: 0,
+            number: 0,
+            size: 100,
+            hasNext: false,
+            hasPrevious: false,
+        }));
 
-        const events = await getEvents();
-
-        expect(events).toEqual([]);
+        await expect(getEvents()).resolves.toEqual([]);
     });
 
     it('keeps working even if some event fields are missing', async () => {
-        // Checks missing optional event fields do not break mapping.
-        mockCollection.mockReturnValueOnce({ path: 'events' });
-        mockOrderBy.mockReturnValueOnce({ field: 'startTime' });
-        mockQuery.mockReturnValueOnce({ path: 'events?orderBy=startTime' });
-        mockGetDocs.mockResolvedValueOnce({
-            docs: [
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            content: [
                 {
                     id: 'e-missing',
-                    data: () => ({
-                        pageId: 'p-1',
-                        title: 'Event Without Extras',
-                        description: undefined,
-                        startTime: { toDate: () => new Date('2026-03-01T12:00:00.000Z') },
-                    }),
+                    pageId: 'p-1',
+                    title: 'Event Without Extras',
+                    startTime: '2026-03-01T12:00:00.000Z',
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
                 },
             ],
-        });
+            totalElements: 1,
+            totalPages: 1,
+            number: 0,
+            size: 100,
+            hasNext: false,
+            hasPrevious: false,
+        }));
 
-        const events = await getEvents();
-
-        expect(events).toEqual([
+        await expect(getEvents()).resolves.toEqual([
             {
                 id: 'e-missing',
                 pageId: 'p-1',
@@ -207,67 +176,33 @@ describe('dal service', () => {
                 place: undefined,
                 coverImageUrl: undefined,
                 eventURL: undefined,
-                createdAt: undefined,
-                updatedAt: undefined,
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
             },
         ]);
     });
 
-    it('passes through Firestore errors when loading events', async () => {
-        // Checks event read errors are passed up for proper handling.
-        const readError = new Error('events read failed');
-        mockCollection.mockReturnValueOnce({ path: 'events' });
-        mockOrderBy.mockReturnValueOnce({ field: 'startTime' });
-        mockQuery.mockReturnValueOnce({ path: 'events?orderBy=startTime' });
-        mockGetDocs.mockRejectedValueOnce(readError);
+    it('throws a fetch status error when loading events fails', async () => {
+        mockFetch.mockResolvedValueOnce(jsonResponse({ message: 'boom' }, 500, 'Internal Server Error'));
 
-        await expect(getEvents()).rejects.toBe(readError);
+        await expect(getEvents()).rejects.toThrow('Failed to fetch events: Internal Server Error');
     });
 
     it('returns null when event does not exist', async () => {
-        // Checks unknown event id returns null instead of crashing.
-        mockDoc.mockReturnValueOnce({ path: 'events/missing' });
-        mockGetDoc.mockResolvedValueOnce({
-            exists: () => false,
-        });
+        mockFetch.mockResolvedValueOnce(jsonResponse({}, 404, 'Not Found'));
 
-        const event = await getEventById('missing');
-
-        expect(event).toBeNull();
+        await expect(getEventById('missing')).resolves.toBeNull();
     });
 
-    it('passes through Firestore errors when loading one event', async () => {
-        // Checks single-event read errors are passed up clearly.
+    it('passes through network errors when loading one event', async () => {
         const readError = new Error('single event read failed');
-        mockDoc.mockReturnValueOnce({ path: 'events/fail' });
-        mockGetDoc.mockRejectedValueOnce(readError);
+        mockFetch.mockRejectedValueOnce(readError);
 
         await expect(getEventById('fail')).rejects.toBe(readError);
     });
 
-    it('maps fetched Firestore event to app event format', async () => {
-        // Checks one event is mapped correctly, including timestamp conversion.
-        mockDoc.mockReturnValueOnce({ path: 'events/evt-1' });
-        mockGetDoc.mockResolvedValueOnce({
-            id: 'evt-1',
-            exists: () => true,
-            data: () => ({
-                pageId: 'page-1',
-                title: 'Sample Event',
-                description: 'Desc',
-                startTime: { toDate: () => new Date('2026-01-01T12:00:00.000Z') },
-                endTime: { toDate: () => new Date('2026-01-01T14:00:00.000Z') },
-                place: { name: 'DTU' },
-                coverImageUrl: 'https://example.com/image.jpg',
-                eventURL: 'https://example.com/event',
-                createdAt: { toDate: () => new Date('2025-12-01T10:00:00.000Z') },
-                updatedAt: { toDate: () => new Date('2025-12-02T10:00:00.000Z') },
-            }),
-        });
-
-        const event = await getEventById('evt-1');
-
-        expect(event).toEqual({
+    it('maps fetched event to app event format', async () => {
+        mockFetch.mockResolvedValueOnce(jsonResponse({
             id: 'evt-1',
             pageId: 'page-1',
             title: 'Sample Event',
@@ -275,7 +210,21 @@ describe('dal service', () => {
             startTime: '2026-01-01T12:00:00.000Z',
             endTime: '2026-01-01T14:00:00.000Z',
             place: { name: 'DTU' },
-            coverImageUrl: 'https://example.com/image.jpg',
+            coverImageId: 8,
+            eventUrl: 'https://example.com/event',
+            createdAt: '2025-12-01T10:00:00.000Z',
+            updatedAt: '2025-12-02T10:00:00.000Z',
+        }));
+
+        await expect(getEventById('evt-1')).resolves.toEqual({
+            id: 'evt-1',
+            pageId: 'page-1',
+            title: 'Sample Event',
+            description: 'Desc',
+            startTime: '2026-01-01T12:00:00.000Z',
+            endTime: '2026-01-01T14:00:00.000Z',
+            place: { name: 'DTU' },
+            coverImageUrl: expect.stringMatching(/\/media\/8$/),
             eventURL: 'https://example.com/event',
             createdAt: '2025-12-01T10:00:00.000Z',
             updatedAt: '2025-12-02T10:00:00.000Z',

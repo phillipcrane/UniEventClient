@@ -189,8 +189,6 @@ describe('auth service', () => {
         unsubscribe();
     });
 
-    // ── mapAuthError ─────────────────────────────────────────────────────────
-
     it('returns "Invalid email or password" for 401', () => {
         expect(mapAuthError({ status: 401 }, 'login')).toBe('Invalid email or password.');
     });

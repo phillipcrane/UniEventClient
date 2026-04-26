@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sun, Moon } from 'lucide-react';
+import { STORAGE_KEY_THEME, THEME_DARK, THEME_LIGHT } from '../constants';
 import '../styles/ThemeToggle.css';
-
-const THEME_STORAGE_KEY = 'ui-theme';
 
 export function ThemeToggle() {
   const [dark, setDark] = useState<boolean>(() => {
@@ -11,13 +10,9 @@ export function ThemeToggle() {
     }
 
     try {
-      const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-      if (storedTheme === 'dark') {
-        return true;
-      }
-      if (storedTheme === 'light') {
-        return false;
-      }
+      const storedTheme = window.localStorage.getItem(STORAGE_KEY_THEME);
+      if (storedTheme === THEME_DARK) return true;
+      if (storedTheme === THEME_LIGHT) return false;
     } catch {
       // Ignore storage access issues and fall back to default theme.
     }
@@ -27,11 +22,11 @@ export function ThemeToggle() {
 
   useEffect(() => {
     const root = document.documentElement;
-    if (dark) root.classList.add('dark');
-    else root.classList.remove('dark');
+    if (dark) root.classList.add(THEME_DARK);
+    else root.classList.remove(THEME_DARK);
 
     try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, dark ? 'dark' : 'light');
+      window.localStorage.setItem(STORAGE_KEY_THEME, dark ? THEME_DARK : THEME_LIGHT);
     } catch {
       // Ignore storage access issues and keep runtime theme in memory.
     }

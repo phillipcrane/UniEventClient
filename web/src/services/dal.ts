@@ -6,6 +6,7 @@
  */
 
 import type { Event, Page, Place } from '../types';
+import { DEFAULT_PAGE_SIZE, DEFAULT_EVENTS_SORT } from '../constants';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? '';
 
@@ -120,7 +121,7 @@ async function createFetchError(response: Response, context: string): Promise<Er
 /**
  * Fetch all pages (paginated, defaults to first 100)
  */
-export async function getPages(page: number = 0, size: number = 100): Promise<Page[]> {
+export async function getPages(page: number = 0, size: number = DEFAULT_PAGE_SIZE): Promise<Page[]> {
   const url = buildBackendUrl('/api/pages');
   url.searchParams.append('page', page.toString());
   url.searchParams.append('size', size.toString());
@@ -137,7 +138,7 @@ export async function getPages(page: number = 0, size: number = 100): Promise<Pa
 /**
  * Fetch active pages only (paginated)
  */
-export async function getActivePages(page: number = 0, size: number = 100): Promise<Page[]> {
+export async function getActivePages(page: number = 0, size: number = DEFAULT_PAGE_SIZE): Promise<Page[]> {
   const url = buildBackendUrl('/api/pages/active');
   url.searchParams.append('page', page.toString());
   url.searchParams.append('size', size.toString());
@@ -154,8 +155,8 @@ export async function getActivePages(page: number = 0, size: number = 100): Prom
 /**
  * Search pages by name (case-insensitive, paginated)
  */
-export async function searchPages(query: string, page: number = 0, size: number = 100): Promise<Page[]> {
-  const url = new URL(`${BACKEND_URL}/api/pages/search`);
+export async function searchPages(query: string, page: number = 0, size: number = DEFAULT_PAGE_SIZE): Promise<Page[]> {
+  const url = buildBackendUrl('/api/pages/search');
   url.searchParams.append('name', query);
   url.searchParams.append('page', page.toString());
   url.searchParams.append('size', size.toString());
@@ -172,11 +173,11 @@ export async function searchPages(query: string, page: number = 0, size: number 
 /**
  * Fetch all events (paginated, defaults to first 100, sorted by startTime)
  */
-export async function getEvents(page: number = 0, size: number = 100): Promise<Event[]> {
-  const url = new URL(`${BACKEND_URL}/api/events`);
+export async function getEvents(page: number = 0, size: number = DEFAULT_PAGE_SIZE): Promise<Event[]> {
+  const url = buildBackendUrl('/api/events');
   url.searchParams.append('page', page.toString());
   url.searchParams.append('size', size.toString());
-  url.searchParams.append('sort', 'startTime,asc');
+  url.searchParams.append('sort', DEFAULT_EVENTS_SORT);
 
   const response = await fetch(url.toString());
   if (!response.ok) {
@@ -190,7 +191,7 @@ export async function getEvents(page: number = 0, size: number = 100): Promise<E
 /**
  * Fetch upcoming events only (startTime >= now, paginated)
  */
-export async function getFutureEvents(page: number = 0, size: number = 100): Promise<Event[]> {
+export async function getFutureEvents(page: number = 0, size: number = DEFAULT_PAGE_SIZE): Promise<Event[]> {
   const url = buildBackendUrl('/api/events/future');
   url.searchParams.append('page', page.toString());
   url.searchParams.append('size', size.toString());
@@ -208,7 +209,7 @@ export async function getFutureEvents(page: number = 0, size: number = 100): Pro
  * Fetch a single event by ID
  */
 export async function getEventById(id: string): Promise<Event | null> {
-  const url = `${BACKEND_URL}/api/events/${id}`;
+  const url = buildBackendUrlString(`/api/events/${id}`);
 
   const response = await fetch(url);
   if (response.status === 404) {
@@ -225,7 +226,7 @@ export async function getEventById(id: string): Promise<Event | null> {
 /**
  * Fetch events for a specific page/organizer
  */
-export async function getEventsByPageId(pageId: string, page: number = 0, size: number = 100): Promise<Event[]> {
+export async function getEventsByPageId(pageId: string, page: number = 0, size: number = DEFAULT_PAGE_SIZE): Promise<Event[]> {
   const url = buildBackendUrl(`/api/events/page/${pageId}`);
   url.searchParams.append('page', page.toString());
   url.searchParams.append('size', size.toString());
@@ -242,8 +243,8 @@ export async function getEventsByPageId(pageId: string, page: number = 0, size: 
 /**
  * Fetch future events for a specific page/organizer
  */
-export async function getFutureEventsByPageId(pageId: string, page: number = 0, size: number = 100): Promise<Event[]> {
-  const url = new URL(`${BACKEND_URL}/api/events/page/${pageId}/future`);
+export async function getFutureEventsByPageId(pageId: string, page: number = 0, size: number = DEFAULT_PAGE_SIZE): Promise<Event[]> {
+  const url = buildBackendUrl(`/api/events/page/${pageId}/future`);
   url.searchParams.append('page', page.toString());
   url.searchParams.append('size', size.toString());
 
@@ -259,8 +260,8 @@ export async function getFutureEventsByPageId(pageId: string, page: number = 0, 
 /**
  * Fetch events for a specific place/venue
  */
-export async function getEventsByPlaceId(placeId: string, page: number = 0, size: number = 100): Promise<Event[]> {
-  const url = new URL(`${BACKEND_URL}/api/events/place/${placeId}`);
+export async function getEventsByPlaceId(placeId: string, page: number = 0, size: number = DEFAULT_PAGE_SIZE): Promise<Event[]> {
+  const url = buildBackendUrl(`/api/events/place/${placeId}`);
   url.searchParams.append('page', page.toString());
   url.searchParams.append('size', size.toString());
 

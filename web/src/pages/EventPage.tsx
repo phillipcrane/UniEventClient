@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
+import { APP_LOCALE, FEEDBACK_TOAST_MS } from '../constants';
 import { useEffect, useRef, useState } from 'react';
 import type { Event, Page } from '../types';
 import { getEventById, getPages } from '../services/dal';
@@ -8,11 +9,13 @@ import { LikeButton } from '../components/LikeButton';
 import { HeaderLogoLink } from '../components/HeaderLogoLink';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { ShareButton } from '../components/ShareButton';
-import { mapAuthError, onAuthUserChanged, signOutCurrentUser, type AuthUser } from '../services/auth';
-import { CalendarDays, CircleUserRound, Clock3, LogOut, MapPin } from 'lucide-react';
+import { mapAuthError, signOutCurrentUser } from '../services/auth';
+import { useAuth } from '../context/AuthContext';
+import { UserMenu } from '../components/UserMenu';
+import { CalendarDays, Clock3, MapPin } from 'lucide-react';
 
 function formatTimeRange(startTime: string, endTime?: string) {
-  const formatter = new Intl.DateTimeFormat('da-DK', { hour: '2-digit', minute: '2-digit' });
+  const formatter = new Intl.DateTimeFormat(APP_LOCALE, { hour: '2-digit', minute: '2-digit' });
   const start = formatter.format(new Date(startTime));
 
   if (!endTime) {
@@ -42,20 +45,17 @@ function getOrganizerName(event: Event | null, pages: Page[]) {
 }
 
 export function EventPage() {
-  const { id } = useParams<{ id: string }>(); // id for /events/:id
-  const [event, setEvent] = useState<Event | null>(null); // make events stateful
+  const { id } = useParams<{ id: string }>();
+  const { currentUser } = useAuth();
+  const [event, setEvent] = useState<Event | null>(null);
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
-  // () => means "when this happens, do this". Lambda function / arrow function syntax.
   useEffect(() => {
     if (!id) return;
 
-    // fetch event by id from dal.ts
-    const getEventFromDal = async () => {
+    (async () => {
       setIsLoading(true);
       try {
         const [fetchedEvent, fetchedPages] = await Promise.all([
@@ -67,25 +67,12 @@ export function EventPage() {
       } finally {
         setIsLoading(false);
       }
-    };
-    getEventFromDal(); // async
+    })();
   }, [id]);
-
-  useEffect(() => {
-    const unsubscribe = onAuthUserChanged((user) => {
-      setCurrentUser(user);
-      if (!user) {
-        setIsProfileOpen(false);
-      }
-    });
-
-    return unsubscribe;
-  }, []);
 
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<string>('');
   const addMenuRef = useRef<HTMLDivElement | null>(null);
-  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   // close the menu when clicking outside
   useEffect(() => {
@@ -101,28 +88,11 @@ export function EventPage() {
     return () => document.removeEventListener('mousedown', onClick);
   }, [showAddMenu]);
 
-  useEffect(() => {
-    if (!isProfileOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
-        setIsProfileOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isProfileOpen]);
-
   async function handleSignOut() {
     try {
       setIsSigningOut(true);
       await signOutCurrentUser();
-      setIsProfileOpen(false);
     } catch (error) {
-      // Keep the event page stable if sign-out fails.
       console.error(mapAuthError(error));
     } finally {
       setIsSigningOut(false);
@@ -133,7 +103,7 @@ export function EventPage() {
 
   const handleLikeToggle = (isSaved: boolean) => {
     setSaveFeedback(isSaved ? 'Saved to your profile.' : 'Removed from saved events.');
-    window.setTimeout(() => setSaveFeedback(''), 1500);
+    window.setTimeout(() => setSaveFeedback(''), FEEDBACK_TOAST_MS);
   };
 
   const organizerName = getOrganizerName(event, pages);
@@ -158,52 +128,18 @@ export function EventPage() {
           <ThemeToggle />
 
           {currentUser ? (
-            <div className="relative" ref={profileMenuRef}>
-              <button
-                type="button"
-                onClick={() => setIsProfileOpen((open) => !open)}
-                className="inline-flex items-center justify-center rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--input-focus-border)]"
-                aria-label="Open account menu"
-                aria-expanded={isProfileOpen}
-              >
-                <CircleUserRound size={18} />
-              </button>
-
-              {isProfileOpen && (
-                <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-2 shadow-xl">
-                  <p className="px-2 py-2 text-xs font-semibold text-[var(--text-subtle)]">
-                    Signed in as
-                  </p>
-                  <p className="truncate px-2 pb-2 text-sm font-semibold text-[var(--text-primary)]">
-                    {userLabel}
-                  </p>
-                  <Link
-                    to="/profile"
-                    onClick={() => setIsProfileOpen(false)}
-                    className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)]"
-                  >
-                    <CircleUserRound size={16} />
-                    Profile
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    disabled={isSigningOut}
-                    className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    <LogOut size={16} />
-                    {isSigningOut ? 'Signing out...' : 'Log out'}
-                  </button>
-                </div>
-              )}
-            </div>
+            <UserMenu
+              userLabel={userLabel}
+              onSignOut={handleSignOut}
+              isSigningOut={isSigningOut}
+            />
           ) : (
             <Link
               to="/login"
               className="inline-flex items-center justify-center rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--button-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--input-focus-border)]"
               aria-label="Go to login"
             >
-              <CircleUserRound size={18} />
+              Login
             </Link>
           )}
         </div>
@@ -317,7 +253,7 @@ export function EventPage() {
                 <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--input-bg)]/70 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">Time</p>
                   <div className="mt-3 space-y-2 text-sm text-[var(--text-primary)]">
-                    <p className="inline-flex items-center gap-2"><CalendarDays size={14} className="text-[var(--text-subtle)]" />{new Intl.DateTimeFormat('da-DK', { weekday: 'long' }).format(new Date(event.startTime))}</p>
+                    <p className="inline-flex items-center gap-2"><CalendarDays size={14} className="text-[var(--text-subtle)]" />{new Intl.DateTimeFormat(APP_LOCALE, { weekday: 'long' }).format(new Date(event.startTime))}</p>
                     <p className="inline-flex items-center gap-2"><Clock3 size={14} className="text-[var(--text-subtle)]" />{formatTimeRange(event.startTime, event.endTime)}</p>
                   </div>
                 </div>

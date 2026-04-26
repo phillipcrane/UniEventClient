@@ -1,8 +1,8 @@
-export const LIKES_CHANGED_EVENT = 'unievent:likes-changed';
+import { STORAGE_KEY_LIKES } from '../constants';
 
 const likesCache = new Map<string, Set<string>>();
 
-const storageKey = (uid: string) => `unievent_likes_${uid}`;
+const storageKey = STORAGE_KEY_LIKES;
 
 function loadFromStorage(uid: string): string[] {
     try {
@@ -16,13 +16,7 @@ function saveToStorage(uid: string, likes: string[]) {
     try {
         localStorage.setItem(storageKey(uid), JSON.stringify(likes));
     } catch {
-        // quota exceeded or private-browsing — in-memory cache remains valid
-    }
-}
-
-function emitLikesChanged() {
-    if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event(LIKES_CHANGED_EVENT));
+        // quota exceeded or private-browsing - in-memory cache remains valid
     }
 }
 
@@ -64,6 +58,5 @@ export async function toggleLikedEvent(uid: string, eventId: string): Promise<bo
 
     setCachedLikes(uid, next);
     saveToStorage(uid, Array.from(next));
-    emitLikesChanged();
     return next.has(eventId);
 }

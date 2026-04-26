@@ -1,4 +1,5 @@
 import type { Event } from '../types';
+import { ICS_PRODID, ICS_UID_DOMAIN } from '../constants';
 
 function formatYmdhms(date: Date) {
   // Google/ICS wants UTC in YYYYMMDDTHHMMSSZ format
@@ -60,11 +61,11 @@ export function buildIcs(event: Event): string {
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//UniEventClient//EN',
+    `PRODID:-//${ICS_PRODID}//EN`,
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',
-    `UID:${event.id}@unievent`,
+    `UID:${event.id}@${ICS_UID_DOMAIN}`,
     `DTSTAMP:${dtstamp}`,
     `DTSTART:${dtstart}`,
     `DTEND:${dtend}`,
