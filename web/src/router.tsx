@@ -11,6 +11,7 @@ import { OrganizerSignupLandingPage } from './pages/OrganizerSignupLandingPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ManualEventPage } from './pages/ManualEventPage';
 import { BecomeOrganizerOnboardingPage } from './pages/BecomeOrganizerOnboardingPage';
+import { GenerateOrganizerKeyPage } from './pages/admin/GenerateOrganizerKeyPage';
 
 export const router = createBrowserRouter([
   {
@@ -60,5 +61,9 @@ export const router = createBrowserRouter([
   {
     path: '/organizer/onboarding',
     element: <BecomeOrganizerOnboardingPage />,
+  },
+  {
+    path: '/admin/generate-organizer-key',
+    element: <GenerateOrganizerKeyPage />,
   },
 ]);

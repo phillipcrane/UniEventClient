@@ -39,3 +39,10 @@ export function passwordsMatch(password: string, confirmPassword: string): boole
 export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+/**
+ * Validates email length (RFC practical max)
+ */
+export function isValidEmailLength(email: string): boolean {
+  return email.length <= 255;
+}

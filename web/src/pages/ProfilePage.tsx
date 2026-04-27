@@ -251,9 +251,11 @@ export function ProfilePage() {
                                         <h2 className="text-3xl font-bold text-[var(--text-primary)]">{username}</h2>
                                         <span className={`mt-2 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] ${accountRole === 'organizer'
                                             ? 'border border-transparent bg-[var(--link-primary)] text-white'
-                                            : 'border border-[var(--panel-border)] bg-[var(--panel-bg)] text-[var(--text-primary)]'
+                                            : accountRole === 'admin'
+                                                ? 'border border-transparent bg-emerald-600 text-white'
+                                                : 'border border-[var(--panel-border)] bg-[var(--panel-bg)] text-[var(--text-primary)]'
                                             }`}>
-                                            {accountRole === 'organizer' ? 'Organizer' : 'User'}
+                                            {accountRole === 'organizer' ? 'Organizer' : accountRole === 'admin' ? 'Admin' : 'User'}
                                         </span>
                                     </div>
 
@@ -267,6 +269,14 @@ export function ProfilePage() {
                                             <Heart size={12} fill="currentColor" />
                                             {likedEvents.length} saved
                                         </span>
+                                        {accountRole === 'admin' && (
+                                            <Link
+                                                to="/admin/generate-organizer-key"
+                                                className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-emerald-200 transition-colors duration-200 hover:bg-emerald-500/20"
+                                            >
+                                                Admin: Generate Organizer Key
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
                             </div>

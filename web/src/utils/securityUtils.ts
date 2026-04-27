@@ -14,10 +14,18 @@ export function sanitizeErrorMessage(message: string): string {
     return 'Something went wrong. Please try again.';
   }
 
-  // Use textContent to escape all HTML entities
-  const div = document.createElement('div');
-  div.textContent = message;
-  return div.innerHTML;
+  if (typeof document !== 'undefined') {
+    const div = document.createElement('div');
+    div.textContent = message;
+    return div.innerHTML;
+  }
+
+  return message
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /**
@@ -33,7 +41,7 @@ export function enforceHttpsBackend(backendUrl: string): void {
   if (!backendUrl.startsWith('https://')) {
     throw new Error(
       `Backend URL must use HTTPS for security. Current: ${backendUrl}. ` +
-        'HTTP is not allowed for authentication and sensitive data transmission.'
+      'HTTP is not allowed for authentication and sensitive data transmission.'
     );
   }
 }

@@ -4,6 +4,8 @@ const USER_KEY = 'unievent_user';
 
 import { sanitizeErrorMessage } from '../utils/securityUtils';
 import type {
+    GenerateOrganizerKeyRequest,
+    GenerateOrganizerKeyResponse,
     OrganizerKeyRequestData,
     OrganizerKeyRequestResponse,
     OrganizerKeyVerifyResponse,
@@ -21,7 +23,23 @@ export type AuthUser = {
     organizerNames?: string[];
 };
 
-export type AccountRole = 'user' | 'organizer';
+export type AccountRole = 'user' | 'organizer' | 'admin';
+function normalizeAccountRole(role: unknown): AccountRole {
+    if (typeof role !== 'string') {
+        return 'user';
+    }
+
+    const normalizedRole = role.trim().toLowerCase();
+    if (normalizedRole === 'organizer') {
+        return 'organizer';
+    }
+
+    if (normalizedRole === 'admin') {
+        return 'admin';
+    }
+
+    return 'user';
+}
 
 type SignupInput = {
     username: string;
@@ -174,9 +192,9 @@ export async function getAccountProfile(uid?: string): Promise<{ role: AccountRo
         throw createHttpError(response.status, message);
     }
 
-    const data = await response.json() as { role?: AccountRole; organizerNames?: string[] };
+    const data = await response.json() as { role?: string; organizerNames?: string[] };
     const profile = {
-        role: data.role ?? 'user',
+        role: normalizeAccountRole(data.role),
         organizerNames: Array.isArray(data.organizerNames) ? data.organizerNames : [],
     };
 
@@ -339,4 +357,69 @@ export function mapOrganizerKeyRequestError(error: unknown): string {
     }
 
     return mapAuthError(error);
+}
+
+/**
+ * Generate a new organizer invitation key and send it by email
+ * Admin-only endpoint
+ */
+export async function generateOrganizerKey(
+    data: GenerateOrganizerKeyRequest,
+): Promise<GenerateOrganizerKeyResponse> {
+    const token = getAuthToken();
+    if (!token) {
+        throw createHttpError(401, 'Not authenticated');
+    }
+
+    const response = await fetch(`${BACKEND_URL}/api/auth/organizer-key/generate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        const message = await response.text();
+        throw createHttpError(response.status, message);
+    }
+
+    return response.json() as Promise<GenerateOrganizerKeyResponse>;
+}
+
+/**
+ * Map HTTP errors to user-friendly messages for admin organizer key generation
+ */
+export function mapAdminKeyError(error: unknown): string {
+    if (!(error instanceof Error) || !('status' in error)) {
+        return sanitizeErrorMessage('Something went wrong. Please try again.');
+    }
+
+    const httpError = error as Error & { status: number };
+    const message = (httpError.message || '').toLowerCase();
+
+    if (httpError.status === 401) {
+        return sanitizeErrorMessage('You are not logged in. Please log in to continue.');
+    }
+    if (httpError.status === 403) {
+        return sanitizeErrorMessage('You do not have permission to generate invitation keys. Admin role required.');
+    }
+    if (httpError.status === 400) {
+        if (message.includes('email')) {
+            return sanitizeErrorMessage('Please enter a valid email address.');
+        }
+        return sanitizeErrorMessage('Invalid input. Please check your details.');
+    }
+    if (httpError.status === 409 && message.includes('registered')) {
+        return sanitizeErrorMessage('This email is already registered. Please use a different email.');
+    }
+    if (httpError.status === 500 && message.includes('email')) {
+        return sanitizeErrorMessage('Failed to send invitation email. Please try again later.');
+    }
+    if (httpError.status === 500) {
+        return sanitizeErrorMessage('Server error. Please try again later.');
+    }
+
+    return sanitizeErrorMessage('An unexpected error occurred. Please try again.');
 }
