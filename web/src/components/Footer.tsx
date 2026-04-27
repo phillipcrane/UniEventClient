@@ -36,6 +36,14 @@ export function Footer() {
                   Data Deletion Instructions
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/organizer/onboarding"
+                  className="text-[var(--link-primary)] hover:text-[var(--link-hover)] transition-colors"
+                >
+                  Become Organizer Onboarding
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -44,8 +52,8 @@ export function Footer() {
             <h4 className="font-semibold text-[var(--text-primary)] mb-3">Contact</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a 
-                  href="mailto:philippzhuravlev@gmail.com" 
+                <a
+                  href="mailto:philippzhuravlev@gmail.com"
                   className="text-[var(--link-primary)] hover:text-[var(--link-hover)] transition-colors flex items-center gap-2"
                 >
                   <Mail className="w-4 h-4" />
@@ -53,8 +61,8 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a 
-                  href="mailto:crillerhylle@gmail.com" 
+                <a
+                  href="mailto:crillerhylle@gmail.com"
                   className="text-[var(--link-primary)] hover:text-[var(--link-hover)] transition-colors flex items-center gap-2"
                 >
                   <Mail className="w-4 h-4" />
@@ -62,8 +70,8 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a 
-                  href="https://github.com/philippzhuravlev/DTUEvent" 
+                <a
+                  href="https://github.com/philippzhuravlev/DTUEvent"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[var(--link-primary)] hover:text-[var(--link-hover)] transition-colors flex items-center gap-2"

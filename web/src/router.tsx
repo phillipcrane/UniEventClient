@@ -8,6 +8,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ManualEventPage } from './pages/ManualEventPage';
+import { BecomeOrganizerOnboardingPage } from './pages/BecomeOrganizerOnboardingPage';
 
 export const router = createBrowserRouter([
   {
@@ -45,5 +46,9 @@ export const router = createBrowserRouter([
   {
     path: '/organizer/events/new',
     element: <ManualEventPage />,
+  },
+  {
+    path: '/organizer/onboarding',
+    element: <BecomeOrganizerOnboardingPage />,
   },
 ]);
