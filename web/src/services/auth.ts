@@ -66,7 +66,7 @@ function notifyListeners(user: AuthUser | null): void {
 
 function persistUser(user: AuthUser): void {
     localStorage.setItem(TOKEN_KEY, user.token);
-    localStorage.setItem(USER_KEY, JSON.stringify({ username: user.username, email: user.email }));
+    localStorage.setItem(USER_KEY, JSON.stringify({ username: user.username, email: user.email, role: user.role }));
 }
 
 function clearUser(): void {
@@ -79,8 +79,8 @@ export function getCurrentUser(): AuthUser | null {
     const raw = localStorage.getItem(USER_KEY);
     if (!token || !raw) return null;
     try {
-        const { username, email } = JSON.parse(raw) as { username: string; email: string };
-        return { username, email, token, uid: username, displayName: username };
+        const { username, email, role } = JSON.parse(raw) as { username: string; email: string; role?: AccountRole };
+        return { username, email, token, uid: username, displayName: username, role: role ?? 'user' };
     } catch {
         return null;
     }
@@ -105,8 +105,8 @@ export async function loginWithEmail(email: string, password: string): Promise<A
         );
     }
 
-    const data = await response.json() as { token: string; username: string; email: string };
-    const user: AuthUser = { token: data.token, username: data.username, email: data.email, uid: data.username, displayName: data.username };
+    const data = await response.json() as { token: string; username: string; email: string; role: string };
+    const user: AuthUser = { token: data.token, username: data.username, email: data.email, uid: data.username, displayName: data.username, role: normalizeAccountRole(data.role) };
     persistUser(user);
     notifyListeners(user);
     return user;
@@ -127,15 +127,14 @@ export async function signupWithEmail({ username, email, password, role, organiz
         );
     }
 
-    const data = await response.json() as { token: string; username: string; email: string };
+    const data = await response.json() as { token: string; username: string; email: string; role: string };
     const user: AuthUser = {
         token: data.token,
         username: data.username,
         email: data.email,
         uid: data.username,
         displayName: data.username,
-        role,
-        organizerNames: organizerNames ? [...organizerNames] : undefined,
+        role: normalizeAccountRole(data.role),
     };
     persistUser(user);
     notifyListeners(user);

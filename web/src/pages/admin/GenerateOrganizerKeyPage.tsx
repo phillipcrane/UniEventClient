@@ -6,7 +6,6 @@ import { AdminHeader } from '../../components/admin/AdminHeader';
 import { useAuth } from '../../context/AuthContext';
 import {
     generateOrganizerKey,
-    getAccountProfile,
     mapAdminKeyError,
 } from '../../services/auth';
 import { sanitizeErrorMessage } from '../../utils/securityUtils';
@@ -40,42 +39,18 @@ export function GenerateOrganizerKeyPage() {
     );
 
     useEffect(() => {
-        let cancelled = false;
+        if (!currentUser) {
+            navigate('/login', { replace: true });
+            return;
+        }
 
-        const authorize = async () => {
-            if (!currentUser) {
-                navigate('/login', { replace: true });
-                return;
-            }
+        if (currentUser.role !== 'admin') {
+            navigate('/', { replace: true });
+            return;
+        }
 
-            try {
-                const profile = await getAccountProfile(currentUser.uid);
-                if (cancelled) {
-                    return;
-                }
-
-                if (profile.role !== 'admin') {
-                    navigate('/', { replace: true });
-                    return;
-                }
-
-                setIsAdmin(true);
-            } catch {
-                if (!cancelled) {
-                    navigate('/login', { replace: true });
-                }
-            } finally {
-                if (!cancelled) {
-                    setIsAuthorizing(false);
-                }
-            }
-        };
-
-        void authorize();
-
-        return () => {
-            cancelled = true;
-        };
+        setIsAdmin(true);
+        setIsAuthorizing(false);
     }, [currentUser, navigate]);
 
     function validateForm(): boolean {
